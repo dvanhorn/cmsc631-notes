@@ -1,0 +1,1113 @@
+\NeedsTeXFormat{LaTeX2e}
+\documentclass[11pt]{article}
+%\usepackage{times}
+\usepackage{url}
+\usepackage{amsmath}
+% \usepackage{mathpazo}
+\usepackage{xltxtra}
+\usepackage{fancyhdr}
+\usepackage{xunicode}
+\usepackage{hyperref}
+\usepackage{amssymb}
+\usepackage{mathpartir}
+\usepackage{exercise}
+\usepackage[nohead,nofoot,vmargin=1.25in,hmargin=1.25in]{geometry}
+
+\setmainfont[Mapping=tex-text]{Bitstream Iowan Old Style BT}
+
+\newcommand{\deftech}[1]{\textbf{#1}}
+
+\newcommand\mrel{\mathop{\mathbf{r}}}
+\newcommand\morel{\mathop{\mathbf{r}'}}
+\newcommand\menv{\rho}
+\newcommand\mval{v}
+\newcommand\mans{a}
+\newcommand\mint{i}
+\newcommand\moint{j}
+\newcommand\mbool{b}
+
+\newcommand\mexp{e}
+
+\newcommand\beval[3]{{#1} \vdash {#2} \Downarrow {#3}}
+
+\newcommand\dom{\mathsf{dom}}
+
+\newcommand{\syntax}[1]{{\tt #1}}
+
+\newcommand\Err{\mathit{Err}}
+\newcommand\Plus{\mathit{Plus}}
+\newcommand\Mult{\mathit{Mult}}
+\newcommand\Succ{\mathit{Succ}}
+\newcommand\Pred{\mathit{Pred}}
+\newcommand\Eq{\mathit{Eq}}
+\newcommand\True{\mathit{True}}
+\newcommand\False{\mathit{False}}
+\newcommand\If{\mathit{If}}
+\newcommand\Div{\mathit{Div}}
+
+\newcommand\reduce{\mathop{\mathbf{a}}}
+\newcommand\step{\rightarrow_\mathbf{a}}
+\newcommand\multistep{\rightarrow^\star_\mathbf{a}}
+
+
+\newcommand\breducename{\mathbf{b}}
+\newcommand\bstepname{\rightarrow_{\breducename}}
+\newcommand\bmultistepname{\rightarrow^\star_{\breducename}}
+
+\newcommand\breduce[3]{#1 \vdash {#2}\;\mathbf{b}\; {#3}}
+
+\newcommand\laxparstep{\rightrightarrows_\mathbf{a}}
+\newcommand\maxparstep{\rightrightarrows'_\mathbf{a}}
+
+
+\newcommand\Arith{\mathcal{A}}
+\newcommand\Barith{\mathcal{B}}
+
+\newcommand\Var{\mathit{Var}}
+
+\newcommand{\mvar}{x}
+\newcommand\s[1]{\mathit{#1}}
+
+
+%% \newcommand\exercise[1]{
+%% \vskip 1em
+%% \noindent
+%% \textbf{Exercise:} {#1}}
+
+%\titlefont{\huge\bfseries}
+
+\title{CMSC631 Program Analysis and Understanding:\\
+  Class notes}
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+
+\newpage
+\section*{Preface}
+\addcontentsline{toc}{section}{\protect\numberline{}Preface}%
+
+These are the course notes to accompany \emph{CMSC631 Program Analysis
+  and Understanding} for the Spring semester of 2014 at the University
+of Maryland.
+%
+This course has been taught many times, over several years, by a
+variety of distinguished and seasoned professors, who have put
+together a wide array of fine supplementary materials, all of which
+have been foolishly discarded by your current professor, who is
+neither distinguished, nor seasoned.  ``Why?'' is the perfectly
+reasonable thought that should be running through your mind at this
+point.
+
+Bret Victor, one of the more interesting philosophers of programming
+around today, wrote a little
+essay\footnote{\url{http://worrydream.com/SomeThoughtsOnTeaching/}} on
+teaching in which he said:
+%
+\begin{quote}
+When I write or talk, it comes out of trying to understand a way of
+thinking that's deeply personal and valuable to me, and then trying to
+share this understanding. It's more than mere passion --- anyone can
+be passionate about anything. It's a kind of honesty that comes from
+distilling and passing on \emph{my own genuine insights and
+  experience}.
+\end{quote}
+And so that's really the reason your unseasoned, undistinguished
+professor has thrown it all out.  These notes are an approximation of
+his own insights and experiences, and are surely full of mistakes and
+shortcomings, reflecting gaps in his own understanding.
+
+Since your professor has thrown out all of the prepared materials
+\emph{and} this is the first time he's taught this course, these notes
+will unfortunately be prepared in a \emph{just-in-time} fashion.  As a
+kind of apology, the source code for these notes have been made
+available in a public repository.  If you spot errors, have better
+ways of presenting ideas, or would like to raise questions not
+answered in the notes, you are encouraged to create issues and pull
+requests:
+
+\begin{center}
+\url{https://github.com/cmsc631/notes}
+\end{center}
+
+Contributions to the notes will be acknowledged explicitly in the
+text, and implicitly in the participation component of your grade.
+
+
+
+
+
+
+\newpage
+\section{Syntax, Semantics, Analysis}
+
+Software is arguably the most complicated and varied kind of artifact
+humans produce.
+%
+People who make software at the highest professional level think
+deeply about the meaning and correctness of the programs they write.
+%
+A command of software design at this level requires developing an
+understanding how we give meaning to phrases of a programming language
+and how to build analytic tools for proving properties of programs.
+
+This course covers basic theoretical ideas and practical techniques
+for modeling and analyzing programming languages; and leveraging those
+techniques to mechanically reason about programs.
+
+%% A \deftech{program property} is a predicate on programs.
+%% %
+%% A program property $P$ is \deftech{semantic} (or \deftech{extensional}) if
+%% \[
+%% p \simeq q \Rightarrow (P(p) \iff P(q))
+%% \]
+%% A program property $P$ is \deftech{trivial} if $P(p)$ for all $p$, or
+%% $\neg P(p)$ for all $p$.
+
+%% Rice's theorem: Let $L$ be a Turing-complete programming language, $P$
+%% a non-trivial semantic program property.  The $P$ is
+%% undecidable.\footnote{Classes of recursively enumerable sets and their
+%%   decision problems, H.~.G.~Rice, Trans. Amer. Math. Soc. 74 (1953),
+%%   358-366.}
+
+%% A static analysis: given $P$, a semantic program property and $(S,S')$, a static analysis for $P$.
+
+%% Soundness $S \subseteq P$, $S' \subseteq \neg P$
+
+
+\subsection{Modelling Syntax with Inductive Sets}
+
+The \emph{syntax} of a programming language is a set of rules for the
+arrangement of words and phrases to create well-formed sentences in
+the language.  In other words, it is the grammar of programs.  Syntax
+comes in two forms: \emph{concrete syntax} describes the way programs
+actually look at the level of braces, semicolons, whitespace, etc.,
+while \emph{abstract syntax} describes the structure of programs
+without worrying over the superficial details of concrete syntax.
+Concrete syntax, while the stuff of frenzied fervor, is actually not
+all that significant for formally reasoning about programming
+languages so we focus exclusively on abstract syntax.
+
+Programs generally have a tree-like structure of nesting phrases and
+expressions, so defining the abstract syntax of a language is no more
+complicated than defining an inductive set.
+%
+As a case study, let's look at a very simple programming language, the
+language of arithmetic expressions.  To keep things as simple as
+possible, the language will include integers, a couple binary
+operators like multiplication and addition, a unary operator for
+successor and predecessor.
+
+Here is an inductive mathematical definition of the set
+$\Arith$.  It is the smallest set satisfying the following
+constraints:
+
+\begin{align}
+i \in \mathbb{Z} \Rightarrow i \in \Arith\\
+e \in \Arith \Rightarrow \Pred(e) \in \Arith\\
+e \in \Arith \Rightarrow \Succ(e) \in \Arith\\
+e_1 \in \Arith \wedge e_2 \in \Arith \Rightarrow \Plus(e_1,e_2) \in \Arith\\
+e_1 \in \Arith \wedge e_2 \in \Arith \Rightarrow \Mult(e_1,e_2) \in \Arith
+\end{align}
+
+
+Like any inductive definition, this can be viewed simultaneously as a
+recipe for \emph{constructing} members of the set $\Arith$ and as a
+procedure for \emph{checking} if a value is a member of the set $\Arith$.
+
+Interpreted as a recipe, you can see that every integer is an
+$\Arith$ program; so $5$ is an $\Arith$ program by
+(1).  Since $5$ is an $\Arith$ program, $\Pred(5)$ is
+an $\Arith$ program by (2).  And therefore
+$\Mult(\Pred(5),5)$ is an $\Arith$ program by
+(5).  The recipe lets us build up bigger and bigger expressions from
+other expressions.  
+
+Interpreted as a checking procedure, we can answer the question ``is
+$\Plus(4,\Succ(2))$ an $\Arith$ program?''  It
+is, according to (4), if both $4$ and $\Succ(2)$ are
+$\Arith$ programs.  Since $4$ is an integer, it is an
+$\Arith$ program; by (3), $\Succ(2)$ is an
+$\Arith$ program if $2$ is an $\Arith$ program, which
+of course it is, by (1).
+
+An alternative notation for defining exactly the same set
+$\Arith$ is to use a BNF grammar:
+
+\[
+\begin{array}{lrcll}
+% \Arith 
+               & e & ::= & i & \text{where }i\in\mathbb{Z}\\ 
+               &   & |   & \Pred(e)\\
+               &   & |   & \Succ(e)\\
+               &   & |   & \Plus(e,e)\\
+               &   & |   & \Mult(e,e)
+\end{array}
+\]
+
+Yet another notation for defining exactly the same set is to use
+inference rules, which is a two-dimensional notation for writing
+implications.  The general form of an \deftech{inference} rule is:
+\begin{mathpar}
+\inferrule{H_1 \\ H_2 \\ \dots \\ H_n }{C}
+\end{mathpar}
+Here $H_1$ through $H_n$ are hypotheses and $C$ is the conclusion.
+The inference rule states that if $H_1$ through $H_n$ are true, then
+conclusion must be true as well.  In other words, the inference rule
+is just a notation for $H_1 \wedge H_2 \wedge \dots \wedge H_n
+\Rightarrow C$.  With that in mind, it is straightforward to
+transliterate the first formulation of $\Arith$ into a set of
+inference rules:
+
+\begin{mathpar}
+  \inferrule*[Right=(1)]{i \in \mathbb{Z}}
+             {i \in \Arith}
+
+  \inferrule*[Right=(2)]{e \in \Arith}
+             {\Pred(e) \in \Arith}
+
+  \inferrule*[Right=(3)]{e \in \Arith}
+             {\Succ(e) \in \Arith}
+
+  \inferrule*[Right=(4)]{e_1 \in \Arith \\ e_2 \in \Arith}
+             {\Plus(e_1,e_2) \in \Arith}
+
+  \inferrule*[Right=(5)]{e_1 \in \Arith \\ e_2 \in \Arith}
+             {\Mult(e_1,e_2) \in \Arith}
+\end{mathpar}
+
+This set of inference rules establishes a very simple \emph{proof
+  system} for constructing proofs that an expression is in the set
+$\Arith$.  A proof is simply a tree constructed following the
+inference rules above.  As an example, here is a proof that
+$\Plus(4,\Succ(2)) \in \Arith$.
+
+\begin{mathpar}
+\inferrule*
+    { \inferrule*
+      {4 \in \mathbb{Z}}
+      {4 \in \Arith}
+      \\
+      \inferrule*
+      {\inferrule*
+        {2 \in \mathbb{Z}}
+        {2 \in \Arith}}
+      {\Succ(2) \in \Arith}}
+    {\Plus(4,\Succ(2)) \in \Arith}
+\end{mathpar}
+
+It's easy to express any BNF grammar as an inductively defined set,
+which in turn is easy to express as a set of inference rules.  But not
+all inductive definitions or inference rules can be expressed as
+grammars.  Consequently, syntax is often defined using BNF, while more
+sophisticated relations are defined using inference rules.
+
+\subsection{Modelling Syntax with Data}
+
+Modelling programs with mathematics is a powerful idea that predates
+computers, but it's arguably more useful to model programs with
+programs.  In other words, we can write programs that operate over
+data representations of programs.  From this perspective, the abstract
+syntax of a programming language is just an inductive data type
+definition.
+
+Here is the data type definition for $\Arith$ that corresponds to the
+earlier mathematical definition\footnote{Already a lie has crept in:
+  OCaml's \syntax{int} is not the same as $\mathbb{Z}$.  We're going
+  to ignore this discrepancy for the time being.  The problem could be
+  resolved by using a big integer library, at the cost of some
+  notational overhead in our examples.}, written in the OCaml
+language:
+%
+\begin{verbatim}
+   type arith = Num of int 
+              | Pred of arith
+              | Succ of arith
+              | Plus of arith * arith
+              | Mult of arith * arith 
+\end{verbatim}
+The only difference, which is inconsequential, is that OCaml, unlike
+math, requires unions to be formed by disjoint types, so integers must
+be ``tagged'' with the \syntax{Num} constructor to make them distinct
+from integers.
+
+We can rely on the type system of OCaml to verify when a value is a
+member of the $\Arith$ set:
+\begin{verbatim}
+   # Plus (Num 4, Succ (Num 2));;
+   - : arith = Plus (Num 4, Succ (Num 2))
+\end{verbatim}
+
+
+\subsection{Natural Semantics}
+
+
+Perhaps the simplest semantics we can give arithmetic expressions is
+to define a relation between an expression and the integer value it
+simplifies to according to the usual rules of arithmetic.
+
+To do this, we define a binary relation $\Downarrow\; \subseteq
+\Arith \times \mathbb{Z}$.  When an expression $e$ is related
+to an integer $i$, it means $e$ \emph{evaluates} to $i$.  Following
+the usual convention, we write $e \Downarrow i$ to mean $(e,i) \in\;
+\Downarrow$ (it's much easier to read $3 < 4$ instead of $(3,4) \in\;
+<$, right?).
+
+Just as we defined the set of $\Arith$ programs inductively,
+we can define the evaluation relation $\Downarrow$ inductively as
+well.
+
+\begin{mathpar}
+\inferrule{\ }
+          {i \Downarrow i}
+
+\inferrule{e \Downarrow i}
+          {\Pred(i) \Downarrow i-1}
+
+\inferrule{e \Downarrow i}
+          {\Succ(i) \Downarrow i+1}
+
+\inferrule{e_1 \Downarrow i\\ e_2 \Downarrow j}
+          {\Plus(e_1,e_2) \Downarrow i+j}
+
+\inferrule{e_1 \Downarrow i\\ e_2 \Downarrow j}
+          {\Mult(e_1,e_2) \Downarrow i\cdot j}
+\end{mathpar}
+
+
+\paragraph{Note on notation:} 
+%
+To be truly pedantic, we should add hypotheses to each of inference
+rules that state $e \in \Arith$ and $i \in \mathbb{Z}$ and so
+on.  The convention that you'll frequently see, and which is used in
+these notes, is that certain metavariables range only over a
+restricted set of values.  So if you see the metavariable ``$e$'', you
+can reasonably read it as $e$ such that $e \in \Arith$.  If
+you see $e$ being used as something that is not an arithmetic
+expression, then it's a mistake.  Likewise, $i$ and $j$ range only
+over integers.
+
+
+The simplest $\Arith$ expression is an integer, which cannot
+be simplified further, so an integer evaluates to itself as shown in
+the leftmost rule.  If an expression $e$ evaluates to an integer $i$,
+then $\Succ(e)$ evaluates to $i+1$ as shown in the second
+rule.  The remaining rules are similar.
+
+The proof that an expression evaluates to some integer can given as a
+proof tree using these inference rules.  For example, here is the
+proof that $\Plus(4,\Succ(2)) \Downarrow 7$.
+
+\begin{mathpar}
+\inferrule{\inferrule*{\ }
+                      {4 \Downarrow 4}
+                      \\
+           \inferrule*{\inferrule*{\ }
+                                  {2 \Downarrow 2}}
+                      {\Succ(2) \Downarrow 3}}
+          {\Plus(4,\Succ(2)) \Downarrow 7}
+\end{mathpar}
+
+Evaluation is defined as a relation, but it is actually a special case
+of a relation: it is a function.  Can you convince yourself of this?
+That is, can you prove that if $e \Downarrow i$ and $e \Downarrow j$,
+then $i=j$?  Assuming you can, that means we can write the
+$\Downarrow$ function as a function in a programming language such as
+OCaml.  It naturally is a recursive function over the data type of
+syntax:
+\begin{verbatim}
+   let rec eval (e : arith) : int = 
+       match e with
+         Num i -> i
+       | Pred e -> (eval e) - 1
+       | Succ e -> (eval e) + 1        
+       | Plus (e1, e2) -> (eval e1) + (eval e2)
+       | Mult (e1, e2) -> (eval e1) * (eval e2)
+\end{verbatim}
+
+The evaluator can be used as a calculator for arithmetic expressions:
+\begin{verbatim}
+   # eval (Plus (Num 4, Succ (Num 2)));;
+   - : int = 7
+\end{verbatim}
+
+The above semantics are called a ``\deftech{big-step}'' or ``\deftech{natural}''
+semantics.  It has a simple correspondence with a structurally
+recursive functional program.  It has the nice property that proofs
+about program evaluation are compositional.  The meaning of a program
+is given by the irreducible value it produces, so the semantics tells
+you \emph{what} a program evaluates to.  If the ``what'' is all you
+are interested in, then this semantics is adequate.
+
+This brings up several questions.  What is a semantics for?  Why would
+one semantics be preferred over another?  What other kind of semantics
+could there possible be?
+
+\subsection{Reduction Semantics}
+
+A semantics is useful for establishing properties of programs.  There
+are all kinds of properties of programs, so there are all kinds of
+semantics of programs; just like math or logic, there is no ``one true
+semantics''.  The program properties of interest depend on what you
+are trying to accomplish.  Are you trying to write a correct
+interpreter?  The natural semantics is probably what you need since it
+tells you what value the interpreter should produce.  Are you trying
+to prove upper bounds on the cost of runnning some programs?  The
+natural semantics won't work because it doesn't say \emph{anything}
+about cost.  Ditto if you want to prove a program can run forever
+without using all available memory.  So a semantics should be tailored
+to properties of interest.
+
+With that in mind, let's investigate a semantics that informs of each
+of the steps a computation goes through toward reaching a value.  This
+is useful for determing, for example, if two programs reach the same
+state, or in which order are operations performed during a
+computation.  In other words, such a semantics would tell us more
+about \emph{how} a program evaluates.
+
+Fundamentally, we do this like before: by specifying relations on
+syntax.  But instead of defining a ``evaluates to'' relation, we
+define a ``steps to'' relation $\reduce$ that captures the basic laws of
+arithmetic reduction.  The new relation does not relate expressions to
+integers, but instead relates expressions to expressions, i.e.~$\reduce
+\subseteq \Arith \times \Arith$.  The meaning of
+related expressions $e_1$ and $e_2$ is that $e_1$ reduces in one step
+to $e_2$.
+
+\begin{mathpar}
+\inferrule*{\ }
+          {\Pred(i) \reduce i-1}
+
+\inferrule*{\ }
+          {\Succ(i) \reduce i+1}
+
+\inferrule*{\ }
+          {\Plus(i,j) \reduce i+j}
+
+\inferrule*{\ }
+          {\Mult(i,j) \reduce i\cdot j}
+
+\end{mathpar}
+
+These axioms\footnote{An axiom is just a inference rule with no
+  hypotheses.} reflect the basic facts of reduction in arithmetic, but
+they're still not enough to capture computation, since for example
+$\Plus(4,\Succ(2))$ doesn't step to anything.  The
+reason is that our axioms only apply when the arguments to operators
+are integers, which is not the case here.  It is true that
+$\Succ(2)$ steps to $3$, but none of the rules allows us to
+evaluate inside of a nested expression.  Let's define another relation
+, $\step\; \subseteq \Arith \times \Arith$, that allows steps within
+nested expressions.
+%
+For the language of $\Arith$ this amounts to taking the
+\deftech{compatible closure} of $\reduce$ over the grammar of
+expressions.  The compatible closure of a relation $\mathbf{r}$ over
+some grammar $g$ derives a new relation $\mathbf{r}'$ that allows
+$\mathbf{r}$ to be distributed through non-terminals in $g$.  Writing
+this out explicitly for the case of $\reduce$ and $e$ is the following:
+
+\begin{mathpar}
+\inferrule*
+    {e \reduce e'}
+    {e \step e'}
+
+\inferrule*
+    {e \step e'}
+    {\Pred(e) \step \Pred(e')}
+
+\inferrule*
+    {e \step e'}
+    {\Succ(e) \step \Succ(e')}
+
+\inferrule*
+    {e_1 \step e_1'}
+    {\Plus(e_1,e_2) \step \Plus(e_1',e_2)}
+
+\inferrule*
+    {e_2 \step e_2'}
+    {\Plus(e_1,e_2) \step \Plus(e_1,e_2')}
+
+\inferrule*
+    {e_1 \step e_1'}
+    {\Mult(e_1,e_2) \step \Mult(e_1',e_2)}
+
+\inferrule*
+    {e_2 \step e_2'}
+    {\Mult(e_1,e_2) \step \Mult(e_1,e_2')}
+
+\end{mathpar}
+%
+Using $\step$, we can see that $\Plus(4,\Succ(2))
+\step \Plus(4,3)$ and $\Plus(4,3) \step 7$.
+%
+Evaluation of a program can be viewed a series of related expressions
+arriving at a final answer.  
+
+If we'd like to capture the notion of ``$e$ steps to $e'$ in any
+number of steps,'' we can define yet another relation, $\multistep\;
+\in \Arith\times\Arith$, as the reflexive, transitive closure of
+$\step$.  The \deftech{reflexive closure} of a relation $\mathbf{r}
+\subseteq X \times X$ is a relation $\mathbf{r}' \subseteq X \times X$
+such that $x\in X \Rightarrow x \mathop{\mathbf{r}'} x$ and $x_1 \in X
+\wedge x_2 \in X \wedge x_1 \mathop{\mathbf{r}} x_2 \Rightarrow x_1
+\mathop{\mathbf{r}'} x_2$.  In other words, the reflexive closure of
+$\mathbf{r}$ relates everying thing in $\mathbf{r}$ plus it relates
+everything to itself.  The reflexive closure of $\step$ captures the
+notion of ``steps in zero or one step.''  The \deftech{transitive
+  closure} of a relation $\mrel \subseteq X \times X$ is a relation
+$\morel \subseteq X \times X$ such that $x_1 \mrel x_2 \Rightarrow x_1
+\morel x_2$ and $x_1 \morel x_2 \wedge x_2 \morel x_3 \Rightarrow x_1
+\morel x_3$.  In other words, the transitive closure of $\mrel$
+relates $x_1$ to $x_2$ if $\mrel$ does, but also includes everything
+$x_2$ relates to, and anything related to that, and so on.  The
+transitive closure of $\step$ captures the notion of ``steps in one or
+more steps''.  Composing these closure operations gives $\multistep$,
+which is ``steps in zero or more steps.''  Writing it out explicitly
+results in the following set of inference rules:
+
+\begin{mathpar}
+\inferrule*{e \step e'}
+           {e \multistep e'}
+
+\inferrule*{\ }
+           {e \multistep e}
+
+\inferrule*{e \multistep e' \\ e' \multistep e''}
+           {e \multistep e''}
+
+\end{mathpar}
+
+The above semantics are a ``\deftech{small-step}'' or
+``\deftech{reduction}'' semantics.  Unlike the natural semantics, the
+reduction semantics accounts for each step of a computation.  Although
+its immaterial for the $\Arith$ language, the small-step approach has
+some advantages over big-step (as we should expect considering it is
+considerable more involved); one of the most important advantages
+comes into play when the object language is sufficient powerful to
+include non-terminating computations.  Since the natural semantics are
+concerned only with final answers, it doesn't say much about
+non-terminating programs, while reduction semantics can still be used
+to reason about the (infinite) steps of such a computation.
+
+
+One important observation to make is that although we've constructed
+an alternative semantics, we can formally relate these two semantics.
+In particular, we can recover a big-step evaluation function from the
+reduction semantics.  Consider the following relation $\downarrow\;
+\subseteq \Arith \times \mathbb{Z}$:
+\[
+\inferrule*{e \multistep i}
+           {e \downarrow i}
+\]
+which is a subset of $\multistep$, restricted to the case of the right
+hand side being an integer.  This relation effectively forgets any
+intermediate terms in a computation and just relates expressions to
+their irreducible values.  This relation, although defined
+differently, is the same relation as $\Downarrow$.  Seen this way, it
+is accurate to say natural semantics are an \deftech{abstraction} of
+reduction semantics, and reduction semantics are a
+\deftech{refinement} of natural semantics.
+
+\begin{exercise}
+Prove $e \Downarrow i \iff e \downarrow i$.
+\end{exercise}
+
+\begin{exercise}
+Is $\reduce$ a function?  Is $\step$?  In each case, either
+  prove the relation is a function or give an example of an expression
+  that relates to two distinct expressions.
+\end{exercise}
+
+\begin{exercise}
+The $\step$ relation codifies that notion of ``takes exactly one step
+of arithmetic reduction.'' In other words, any proof tree of $e \step
+e'$ involves exactly one use of the $\reduce$ rule. (You could prove
+this if you'd like.)  In terms of grade-school arithmetic, this is the
+``show each step of your work'' semantics, which doesn't let you skip
+any steps ($\Downarrow$ lets you skip all of the steps and just give
+the answer) or do any work in parallel.  Design an alternative
+semantics, $\laxparstep$, that allows multiple subexpressions to
+reduce (one step) in parallel.
+  %
+  So for example, $\Plus(\Succ(3),\Pred(5))
+  \laxparstep \Plus(4,4)$.
+  %
+  Note that this semantics should not let you conclude that
+  $\Plus(\Succ(3),\Pred(5)) \laxparstep 8$
+  in just one step.
+  %
+
+  You have a design choices to make for $\laxparstep$: it can allow
+  any amount of parallelism, or it can impose a maximal amount of parallelism.
+  % 
+  Let's call the more lax any amount of parallelism relation
+  $\laxparstep$ and the maximal one $\maxparstep$.  The key difference
+  is that $\laxparstep$ should relate
+  $\Plus(\Succ(3),\Pred(5))$ to
+  $\Plus(4,\Pred(5))$, while $\maxparstep$ should not
+  since there was more work that could have been done in parallel.
+  Design both.  Is $\laxparstep$ a function?  Is $\maxparstep$?
+  Is $\laxparstep$ equal to $\multistep$?  Is $\maxparstep$?
+\end{exercise}
+
+\begin{exercise}
+To give away an answer to an earlier question, $\step$ is \emph{not} a
+function.  To see why, consider $\Plus(\Succ(3),\Pred(5))$.  In one
+step, this program can either become $\Plus(4,\Pred(5))$ or
+$\Plus(\Succ(3),4)$.  So modelling $\step$ as a function in, say,
+OCaml can't be accomplished quite so easily as with $\Downarrow$.  One
+idea for modelling a finite relation in a functional language is to
+rely on the isomorphism 
+\[
+(X \times X) \cong (X \longrightarrow \mathcal{P}(X))\text.
+\]
+This is to say, we can represent a relation as a function from
+an element to the \emph{set} of elements it relates to.
+%
+With this idea in mind, write an OCaml function \syntax{step} that
+represents $\step$.
+\end{exercise}
+
+\begin{exercise}
+To give away yet another answer, $\reduce$ is a function, but it is a
+\deftech{partial function}---it is not defined all elements of
+$\Arith$.  One idea for representing a partial function in a
+functional language is to rely on the isomorphism
+\[
+(X \rightharpoonup X) \cong (X \longrightarrow (\emptyset + \{X\}))\text.
+\]
+This is to say, we can represent a partial function as a total
+function to either the empty set (interpreted as undefined) or a
+single set consisting of the element the partial function maps to.
+This has the nice property that it is consistent with the functional
+view of relations from the previous exercise, since
+\[
+(X \longrightarrow (\emptyset + \{X\})) \subseteq 
+(X \longrightarrow \mathcal{P}(X))\text.
+\]
+Write an OCaml function \syntax{reduce} that represents $\reduce$
+using the above idea.
+\end{exercise}
+
+\begin{exercise}
+The compatible closure of a relation over the syntax of $\Arith$
+expressions can be seen as a function that consumes an $\Arith$
+relation and produces a new $\Arith$ relation. From the functional
+perspective of relations, this means the compatible closure operation
+(for $\Arith$) is a function with the following signature:
+\begin{align*}
+\syntax{compat} : (\Arith \longrightarrow \mathcal{P}(\Arith)) \longrightarrow (\Arith \longrightarrow \mathcal{P}(\Arith))
+\end{align*}
+%
+Design an OCaml function \syntax{compat} that computes the compatible
+closure of its argument.  Test the following conjecture: \syntax{step}
+= \syntax{compat reduce}.
+\end{exercise}
+
+\begin{exercise}
+The transitive and reflexive closure operations are functions that
+consume a relation and produce a new relation.  Using the functional
+view of relations, this means they are functions with the following
+signatures:
+
+\begin{align*}
+\syntax{refl} : (X \longrightarrow \mathcal{P}(X)) \longrightarrow (X \longrightarrow \mathcal{P}(X))\\
+\syntax{trans} : (X \longrightarrow \mathcal{P}(X)) \longrightarrow (X \longrightarrow \mathcal{P}(X))\\
+\end{align*}
+%
+Design OCaml functions for \syntax{refl} and \syntax{trans}.  Test the
+following conjecture: \syntax{refl (trans step)} = \syntax{trans
+  (refl step)}.  The \syntax{refl} function is easy.  The
+\syntax{trans} function is less so because it's not obvious when to
+stop iterating the given relation, but this exercise demonstrates a
+powerful idea we'll see again and again, which is the iterative
+computation of \deftech{fixed points}.
+
+The idea here is that \syntax{trans}, given a relation $\mrel$,
+computes a relation $\morel$, written here as a function:
+\begin{align}
+\morel(x) &= \{x'\ |\ x \mrel x'\} \\
+&\cup \{x'\ |\ x \mrel x_0 \mrel x'\}\\
+&\cup \{x'\ |\ x \mrel x_0 \mrel x_1 \mrel x'\}\\
+&\vdots
+\end{align}
+%
+The elipsis are elliding an infinite number of equations here, but if
+the codomain of $\morel$ is finite, we know that only a finite number
+of equations will ever be used.  Moreover, notice that the $x_0$ of
+(7) is just the $x'$ of (6).  Likewise, the $x_1$ of (8) is just the
+$x'$ of (7).  So if you want to compute $\morel(x)$ you can start with
+the set $\mrel(x)$.  For each $x'$ in this set, compute $\mrel(x')$
+and add it in to the set (you've reached a fixed point!).  Keep doing
+this until $\mrel$ doesn't add anything new to the set.  This is
+$\morel(x)$.
+\end{exercise}
+
+
+\subsection{A Little More Cheese on the Pizza}
+
+The $\Arith$ language is about as simple a programming language as
+your likely to find, although it served us well in demonstrating many
+of the core ideas behind syntax and semantics.
+%
+As programmers, we like programming in rich, expressive languages, 
+which $\Arith$ ain't.
+%
+But as we enrich languages, we must also enrich our models.
+%
+Let's look at a minimal increment to the $\Arith$ language and what it
+enails for our models.
+%
+Let's add a new binary operator, $\Div$, which performs integer
+division.
+%
+Let's add a new binary operator, $\Eq$, which determines if two
+integers are equal.
+%
+Since an answer to the question ``are these two numbers equal?'' is
+either a yes or a no, let's add a new kind of value, Booleans, to the
+language to represent such answers.
+%
+Booleans are useful for conditionally selecting computations, let's
+add a conditional form, $\If(e_1,e_2,e_3)$, which will select $e_2$
+when $e_1$ evaluates to $\True$ and $e_3$ when it evaluates to
+$\False$.  Finally, for good measure, let's throw in variables so that
+programs run on given inputs.  We'll call this language $\Barith$ to
+distinguish it from $\Arith$.
+
+The syntax of $\Barith$ is straightfoward to define.  We add a couple
+nullary constructors for Booleans, a binary constructor for eqaulity
+and for division, and a ternary constructor for conditionals.  For
+variables, we assume there is an infinite, enumerable set of variable
+names, $\Var$, and use lower-case, italic names to denote elements of
+that set.  Two variables are considered ``the same'' if they are
+spelled the same:
+
+\[
+\begin{array}{llcl}
+\mathit{Var} & \mvar & = & \s{x}\ |\ \s{y}\ |\ \s{z}\ |\ \dots \\
+\mathit{Bool} & \mbool & = & \True\ |\ \False\\
+\Barith & e & = & \mvar\ |\ \mbool\ |\ \Eq(e,e)\ |\ \Div(e,e)\ |\ \If(e,e,e)\\
+        &   & | & \mint\ |\ \Pred(e)\ |\ \Succ(e)\ |\ \Plus(e,e)\ |\ \Mult(e,e)
+\end{array}
+\]
+
+
+
+Before delving into the details of the semantics, it's worth taking
+time to ponder over a few $\Barith$ programs and think informally
+about what they should mean:
+
+\begin{enumerate}\setlength{\itemsep}{0pt}
+\item $\s{x}$
+\item $\Eq(\False,7)$
+\item $\Div(7,0)$
+\item $\If(4,1,2)$
+\item $\If(\False,\Div(7,0),3)$
+\end{enumerate}
+
+Let's take the first one.  What should $\s{x}$ mean?  Consider this
+question in the context of a mathematical formula: $x^2+4$.  What does
+$x$ mean here?  The answer is: it depends.  You can answer the
+question without first giving a meaning to the variable.  So $x^2+4$
+means $13$ when $x=3$ and it means $29$ when $x=5$.  The meaning of
+the formula varies with the meaning of the variable.  The same should
+be true for our programming language.
+
+What about $\Eq(\False,7)$?  Here you could make different design
+choices.  You might follow the JavaScript approach and produce false
+since $\False$ is different than $7$.  Or maybe true because the
+pointer representation of $7$ and $\False$ turn out to be the same.
+Or maybe you return $42$, because why not?  Or you might do something
+sensible and raise an error because a numerical operator was applied
+to the wrong kind of argument.  Likewise for $\Div(7,0)$ and
+$\If(4,1,2)$; the right thing is to signal an error.  But what does
+that mean for the semantic model?
+
+Let's identify a set of \emph{values} and a set of \emph{answers}.
+Values include integers and Booleans.  Answers include values and
+errors:
+\[
+\begin{array}{llcl}
+\mathit{Val} & \mval & = & \mbool\ |\ \mint\\
+\mathit{Ans} & \mans & = & \mval\ |\ \Err_\ell
+\end{array}
+\]
+We'll assume there are an infinite number of different errors and
+write subscripts to distinguish them ($\ell$ ranges over these subscripts).
+
+
+Since evaluation now depends on an environment, the natural semantics
+is modelled as a ternary relation $(\cdot \vdash \cdot \Downarrow
+\cdot) \subseteq (\mathit{Var} \rightharpoonup \mathit{Val})\times \Barith \times \mathit{Ans}$.
+
+The result of evaluation should be an answer, so the natural semantics
+is a relation $\Downarrow_\menv\; \subseteq \Barith \times
+\mathit{Ans}$, indexed by an environment $\menv$ mapping variables to
+values.  Values are self evaluating. Variables evaluate to the value
+given by the environment, or an error if undefined:
+\begin{mathpar}
+\inferrule{\ }
+          {\beval\menv\mval\mval}
+
+\inferrule{\menv(\mvar) = \mval}
+          {\beval\menv\mvar\mval}
+
+\inferrule{\mvar \notin \dom(\menv)}
+          {\beval\menv\mvar{\Err_{\mvar}}}
+\end{mathpar}
+Equality is defined as you might expect, producing true when its
+arguments evaluate the same number, false when they evaluate to
+different numbers, and an error when they evaluate to non-numbers:
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint = \moint}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\True}
+
+\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint \neq \moint}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\False}
+
+\inferrule{\beval\menv{\mexp_1}\mbool}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq1}}}
+
+\inferrule{\beval\menv{\mexp_2}\mbool}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq2}}}
+\end{mathpar}
+Division performs the integer division of its arguments when they
+evaluate to numeric values and the denominator is non-zero; it
+produces an error when the denominator is zero or either argument
+evaluates to a non-numeric value:
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\mint
+  \\ \beval\menv{\mexp_2}\moint
+  \\ \moint \neq 0}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\lfloor \mint / \moint \rfloor}}
+
+\inferrule{\beval\menv{\mexp_1}\mint
+  \\ \beval\menv{\mexp_2}\moint
+  \\ \moint = 0}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div0}}}
+
+\inferrule{\beval\menv{\mexp_1}\mbool}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div1}}}
+
+\inferrule{\beval\menv{\mexp_2}\mbool}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div2}}}
+\end{mathpar}
+Conditionals select which value to produce based on the evaluation of
+the test expression, and produce an error if the test produces a
+non-Boolean value:
+\begin{mathpar}
+\inferrule{\beval\menv{e_1}\True \\
+  \beval\menv{e_2}\mans}
+          {\beval\menv{\If(e_1,e_2,e_3)}\mans}
+
+\inferrule{\beval\menv{e_1}\False \\
+  \beval\menv{e_3}\mans}
+          {\beval\menv{\If(e_1,e_2,e_3)}\mans}
+
+\inferrule{\beval\menv{e_1}\mint}
+          {\beval\menv{\If(e_1,e_2,e_3)}{\Err_{\If}}}
+\end{mathpar}
+The remaining rules for $\Succ$, $\Pred$, $\Plus$, and $\Mult$ are
+straightforward following the same pattern as above: when given
+numeric arguments, they do the obvious thing; when given non-numeric
+arguments, they produce errors.
+
+While the above rules take care of creating errors when they arise, no
+rules have dealt with the propagation of errors.  For example, we
+should expect $\Eq(\Div(3,0),4)$ to produce a divide by zero error,
+although as it stands the semantics is undefined.  Adding the
+following rules propagates errors from subexpressions in $\Eq$:
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\Err}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\Err}
+
+\inferrule{\beval\menv{\mexp_2}\Err}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\Err}
+\end{mathpar}
+We need similar rules for all of the remaining syntactic constructors.
+%% ,
+%% with the exception of $\If$.  For $\If$, only the following rule is
+%% added:
+%% \begin{mathpar}
+%% \inferrule{\beval\menv{\mexp_1}\Err}
+%%           {\beval\menv{\If(\mexp_1,\mexp_2,\mexp_3)}\Err}>
+%% \end{mathpar}
+%% Why?  (Hint: think about the last example $\Barith$ program you were
+%% asked to ponder.)
+
+Now that the semantics is in place, let's step back and consider some
+of its properties.  The addition of errors has significantly
+complicated the formal development---we had to add a bunch of rules
+for signal and propogating errors.  But dealing with errors and
+establishing the meaning of errors is a crucial aspect of semantic
+engineering.  Remember that a semantics is useful for definining
+properties of programs, and one of the more useful properties is
+``this program causes no errors.''  So to even talk about this, we
+need to confront error behaviors in the semantics.
+
+But beyond the additional rules, errors, at least as we have
+formulated them, have also caused an important change to our
+semantics.  Unlike in the error-free case of $\Arith$, our evaluation
+relation is no longer a function.  To see this, consider
+$\Eq(\Div(3,0),\False)$.  This expression either produces a divide by
+zero error, or a type error for giving a Boolean to $\Eq$.  This is
+concerning for anyone who wants to write an interpreter for, or reason
+about, $\Barith$ programs.  If we were writing an interpreter, we
+should wonder ``what should it produce for $\Eq(\Div(3,0),\False)$?''
+One answer is an interpreter only has to find \emph{some} answer that
+is consistent with the semantics; so if $\syntax{eval}\; \menv\; \mexp
+= \mval$, then $\beval\menv\mexp\mval$, but the reverse direction
+would not hold (the interpreter then, is an abstraction of the natural
+semantics).  Many languages take this approach.  Haskell for example,
+uses an imprecise exception
+semantics\footnote{\url{http://research.microsoft.com/en-us/um/people/simonpj/papers/imprecise-exn.htm}},
+basically following the outline we have above.  Other languages choose
+to \emph{specify} which error should be signalled by determinism the
+language and restoring the functional nature of evaluation.  
+
+The thing leading to the observed non-determinism of the evaluator is
+the overlap in hypothesis in inference rules.  Consider the error
+propogation rules for $\Eq$.  It's possible that
+$\beval\menv{\mexp_1}\mbool$ \emph{and}
+$\beval\menv{\mexp_2}{\mbool'}$, thus either rule could apply leading
+to distinct answers.  By grade school analogy, it's as if the answer
+to a basic algebra problem depended on the order in which you
+simplified terms.  A solution then is to specify more rigorously the
+order in which subexpressions should be evaluated, which can be
+achieved by making the hypotheses of the inference rules
+non-overlapping.  For example, if we want to evaluate $\Eq$
+expressions left-to-right, we can use the following rules for error
+generation and propogation:
+
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\mbool \\
+           \beval\menv{\mexp_2}\mval}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq1}}}
+
+\inferrule{\beval\menv{\mexp_1}\mint \\
+           \beval\menv{\mexp_2}\mbool }
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq2}}}
+
+\inferrule{\beval\menv{\mexp_1}\Err_\ell}
+          {\beval\menv{\If(\mexp_1,\mexp_2)}\Err_\ell}
+
+\inferrule{\beval\menv{\mexp_1}\mval \\
+           \beval\menv{\mexp_2}\Err_\ell}
+          {\beval\menv{\If(\mexp_1,\mexp_2)}\Err_\ell}
+\end{mathpar}
+
+\begin{exercise}
+Implement an interpreter for the imprecise error semantics as a
+function in OCaml.  Your interpreter is free to produce any answer
+that is consistent with the semantics.
+\end{exercise}
+
+\begin{exercise}\label{ex:determ}
+Following the idea above, develop an alternative semantics for
+$\Barith$ that is deterministic, i.e.  the evaluation relation is a
+function.  Prove that it is in fact a function.  Implement this
+function in OCaml.  Is this function a satisfying solution to the
+previous problem?
+\end{exercise}
+
+
+Now that we've seen the complications errors introduce in the setting
+of natural semantics, let's look at the same development using
+reduction semantics.
+
+One minor tweak is that we will need to include $\Err$s in the syntax
+of $\Barith$ programs to model reduction:
+\[
+\begin{array}{llcl}
+\mathit{Exp} & \mexp & = & \dots\ |\ \Err_\ell
+\end{array}
+\]
+With this in place, the axioms are straightforward:
+\begin{mathpar}
+  \inferrule{\menv(\mvar) = \mval}
+            {\breduce\menv\mvar\mval}
+
+  \inferrule{\mvar \notin \dom{\menv}}
+            {\breduce\menv\mvar{\Err_\mvar}}
+
+  \inferrule{i=j}
+            {\breduce\menv{\Eq(i,j)}\True}
+
+  \inferrule{i\neq j}
+            {\breduce\menv{\Eq(i,j)}\False}
+
+  \inferrule{j\neq 0}
+            {\breduce\menv{\Div(i,j)}{\lfloor i/j \rfloor}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(i,0)}{\Err_{\Div0}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\If(\True,\mexp_1,\mexp_2)}{\mexp_1}}
+
+  \inferrule{\ }
+            {\breduce\menv{\If(\False,\mexp_1,\mexp_2)}{\mexp_2}}
+
+\end{mathpar}
+We need rules for creating type errors:
+\begin{mathpar}
+  \inferrule{\ }
+            {\breduce\menv{\Eq(\mbool,\mexp)}{\Err_{\Eq1}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Eq(\mexp,\mbool)}{\Err_{\Eq2}}}           
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(\mbool,\mexp)}{\Err_{\Div1}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(\mexp,\mbool)}{\Err_{\Div2}}}           
+
+  \inferrule{\ }
+            {\breduce\menv{\If(i,\mexp_1,\mexp_2)}{\Err_\If}}
+
+\end{mathpar}
+And we need rules for propagating errors (shown for $\Eq$, remaining
+syntactic constructors are similar):
+\begin{mathpar}
+\inferrule{\ }
+          {\breduce\menv{\Eq(\Err_\ell,\mexp)}{\Err_\ell}}
+
+\inferrule{\ }
+          {\breduce\menv{\Eq(\mexp,\Err_\ell)}{\Err_\ell}}
+\end{mathpar}
+
+We can now define $\bstepname$ as the compatible closure of
+$\breducename$ over the grammar of $\Barith$ expressions, and
+$\bmultistepname$ as the reflexive transitive closure of $\bstepname$.
+We should have the following property:
+$\menv\vdash\mexp\mathop{\bmultistepname}\mans \iff \beval\menv\mexp\mans$.
+
+\begin{exercise}
+Prove $\menv\vdash\mexp\mathop{\bmultistepname}\mans \iff \beval\menv\mexp\mans$.
+\end{exercise}
+
+\begin{exercise}
+Develop an alternative reduction semantics for $\Barith$ that
+corresponds to the natural semantics you developed in
+exercise~\ref{ex:determ}.  Hint: you will need an alternative set of
+axioms, but you will also need to define the one-step reduction
+relation explicitly without just using the compatible closure of the axioms.
+\end{exercise}
+
+\subsection{Reduction in Context}
+
+[TODO]
+
+\subsection{Equational Theories of Programs}
+
+[TODO]
+
+% 72
+% 20-30 term 1, bus
+
+\end{document}
+

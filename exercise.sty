@@ -1,0 +1,404 @@
+%  Exercise
+%
+%  Copyright (C) 2001, 2002, 2003, 2007, 2011 Didier Rémy
+%
+%  Author         : Didier Remy 
+%  Version        : 1.1.3
+%  Bug Reports    : to author
+%  Web Site       : http://pauillac.inria.fr/~remy/latex/
+% 
+%  Exercise is free software; you can redistribute it and/or modify
+%  it under the terms of the GNU General Public License as published by
+%  the Free Software Foundation; either version 2, or (at your option)
+%  any later version.
+%  
+%  Exercise is distributed in the hope that it will be useful,
+%  but WITHOUT ANY WARRANTY; without even the implied warranty of
+%  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+%  GNU General Public License for more details 
+%  (http://pauillac.inria.fr/~remy/license/GPL).
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%  File exercise.sty (LaTeX macros)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%
+
+%% Identification
+
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{exercise}
+         [2011/11/11 version 1.1.3 Exercise]
+
+%% Preliminary declarations
+
+\RequirePackage {keyval}
+
+\newcommand \setanswer [1]{\setkeys{answer}{#1}}
+
+\newif \ifin@exercise \in@exercisefalse
+\newif \if@answers \@answerstrue
+\newif \if@answer@anchor \@answer@anchortrue
+\newif \if@answer@later \@answer@latertrue
+\newif \if@answer@some \@answer@somefalse
+
+\define@key {answer}{show}[]{\@answerstrue}
+\define@key {answer}{hide}[]{\@answersfalse}
+\define@key {answer}{inline}[]{\@answer@laterfalse}
+\define@key {answer}{later}[]{\@answer@latertrue}
+\define@key {answer}{anchor}[]{\@answer@anchortrue}
+\define@key {answer}{noanchor}[]{\@answer@anchorfalse}
+
+%% Options
+
+\DeclareOption*{\edef \exo@answer@file{\CurrentOption}}
+\DeclareOption{hide}{\@answersfalse}
+\DeclareOption{inline}{\@answer@laterfalse}
+\DeclareOption{noanchor}{\@answer@anchorfalse}
+\ProcessOptions\relax
+
+%% More declarations
+
+\def \@beginexercisehook {}
+\def \AtBeginExercise {\g@addto@macro \@beginexercisehook}
+
+\newcommand{\AboveExerciseSkip}[1]
+   {\g@addto@macro {\endExercise}{\vskip -\lastskip\vskip #1}}
+\newcommand {\BelowExerciseSkip}[1]
+   {\AtBeginExercise {\vskip -\lastskip \vskip #1}}
+
+
+\def \@begindocumentexercisehook {}
+\def \AtBeginDocumentExercise {\g@addto@macro \@begindocumentexercisehook}
+\AtBeginDocument {\@begindocumentexercisehook}
+\AtBeginDocumentExercise 
+  {\@ifundefined {exo@filename}{\edef \exo@filename{\jobname}}{}}
+\define@key {answer}{file}{\exo@set@filename {#1}}
+\def \exo@set@filename #1{\def \exo@filename {#1}}
+\@onlypreamble \exo@set@filename
+
+\def \exo@empty{}
+\@ifundefined {thechapter}
+   {\let \exo@chapter \exo@empty}
+   {\def \exo@chapter {\thechapter}}
+\newcommand {\exo@hyperlink}[2]
+  {\@ifundefined {hyperlink}{#2}{\hyperlink {#1}{#2}}}
+\newcommand {\exo@hypertarget}[2]
+  {\@ifundefined {hypertarget}{#2}{\hypertarget {#1}{#2}}}
+
+\def \exo@francais{frenchb}
+\ifx \exo@francais \languagename
+  \def \ExerciseName {Exercice}
+  \def \AnswerName {Réponse}
+\else
+  \def \ExerciseName {Exercise}
+  \def \AnswerName {Answer}
+\fi
+
+\newcommand {\exo@SquareBox}[2][0.033em]
+  {\hbox {\vbox {\hrule height #1\hbox to #2
+         {\vrule width #1\vbox to #2{\vss}\hss \vrule width #1}\hrule
+         height #1}}}
+
+\AtBeginDocumentExercise
+ {\newwrite \ans@channel
+  \def \open@ans
+      {\immediate \openout \ans@channel \exo@filename.ans\relax
+       \global \let \open@ans \relax}}
+\def \ans@reopen
+      {\@ifundefined {exo@suffix}{\global \newcount \exo@suffix}{}%
+       \global \advance \exo@suffix \@ne
+       \xdef \exo@filename {\jobname\the \exo@suffix}%
+       \immediate \openout \ans@channel \exo@filename.ans\relax
+       \global \let \open@ans \relax}
+
+%\openans
+% \let \@exercise \exercise
+% \def \exercise {\openans \global \let \exercise \@exercise\exercise}
+
+%\def \ans@write #1{\xdef \ans@put {\write\ans@channel {#1}}\ans@put}
+\def \ans@write #1{\open@ans \immediate \write\ans@channel {#1}}
+
+%% Ugly hack so that it works with latex, amsthm, and ntheorem. 
+%% \newtheorem{Exercise}{\exo@hypertarget{Exo-\theExercise}{\ExerciseName}}
+
+%% Must be called at beging document, because theorem may not be loaded
+%% right now. 
+
+\AtBeginDocument{%
+\let \exo@ExerciseName \relax%
+\newtheorem{Exercise} {\exo@ExerciseName}%
+\def \exo@ExerciseName {\exo@hypertarget{Exo-\theExercise}{\ExerciseName}}%
+}
+
+\newcounter{Question}
+
+\let \exo@endparenv \@endparenv
+\def \exo@no@endparenv {\let \@endparenv \exo@endparenv}
+\def \exo@nobreakafter {\let \@endparenv \exo@no@endparenv}
+\newenvironment {exercise}[1][]
+    {\def \@test {#1}\ifx \@test \@empty
+     \begin{Exercise}\else \begin{Exercise}[#1]\fi
+     \@beginexercisehook
+     \in@exercisetrue
+     \setcounter {Question}{0}%
+     \let \nobreakafter \exo@nobreakafter
+     \ans@write {\string
+         \ExerciseNew {\@currentlabel}{\exo@chapter}{\thepage}{#1}}}
+    {\ifvmode \vskip -\lastskip \nopagebreak \else
+     \unskip \unpenalty \unskip \penalty 100\-\hbox{}\penalty 100\fi
+     \hfill \hbox to 1em{\hfil \exo@SquareBox {0.5em}}\end{Exercise}}
+
+\def \ans@lastlabel {}
+\let \fragileanswer \ans@write
+
+%% This environment can be redefined to customize immediate answers.
+\newenvironment {AnswerNow}
+   {\par \em \noindent {\underline {\AnswerName}:}}
+   {\par \smallskip}
+
+\def\@answer
+  {\@beforeanswerhook
+   \if@answers \ifin@exercise 
+     \if@answer@later
+       \global\@answer@sometrue
+        \em
+        \stepcounter{Question}%
+        \if@answer@anchor
+           \@ifundefined {hyperlink}{}
+              {\unskip \nobreak\hfil\penalty50\hskip 1em \hbox{}\nobreak
+               \hskip 0em plus 1filll 
+               \exo@hyperlink
+                  {Ans-\theExercise.\theQuestion}{\hbox {\AnswerName}}\nobreak
+               \hskip 1em\penalty -10000}%
+        \fi 
+        \ifx \ans@lastlabel \@currentlabel
+           \ans@write {\string \AnswerContinued
+                         {\@currentlabel}{\theQuestion}{\thepage}}%
+        \else
+           \ans@write {\string \AnswerNew
+                         {\@currentlabel}{\theQuestion}{\thepage}}%
+           \global \edef \ans@lastlabel {\@currentlabel}%
+        \fi
+      \else
+         \let \endanswer \endAnswerNow \let \ans@copytoend \AnswerNow
+      \fi
+   \fi \fi
+   \@beginanswerhook
+   \ans@copytoend}
+\let \answer \@answer  
+\def \@beginanswerhook{}
+\def \@beforeanswerhook{}
+\def \AtBeforeAnswer {\g@addto@macro \@beforenanswerhook}
+\def \AtBeginAnswer {\g@addto@macro \@beginanswerhook}
+
+\def \un@inpenc@loop#1#2{%
+  \@tempcnta`#1\relax
+  \loop
+    \catcode\@tempcnta 12
+  \ifnum\@tempcnta<`#2\relax
+     \advance\@tempcnta\@ne
+  \repeat}
+
+  
+%% To undo accents encodings, so as to be truely verbatim
+\def\uninputencoding {\@ifundefined {inputencoding}{\catcode `\^^A 12}{%
+    \un@inpenc@loop\^^A\^^H%
+    \un@inpenc@loop\^^K\^^K%
+    \un@inpenc@loop\^^N\^^_%
+    \un@inpenc@loop\^^?\^^ff%
+    }}
+
+\def \exo@answer@env{answer}
+\def \exo@next@end {\csname end\exo@answer@env\endcsname
+                \expandafter \endgroup \ignorespaces}
+\bgroup
+\catcode `\|=0 \catcode `\{=12 \catcode `\}=12
+\catcode `\[=1 \catcode `\]=2  \catcode`\\=12
+
+|gdef |ans@dotest#1\end{#2}#3|END[%
+      |def |@test [#1]|ifx |@test|empty
+          |def |@env [#2]|ifx |@env |exo@answer@env 
+             |let |exo@next |exo@next@end 
+          |fi
+      |fi
+      |ifx |exo@next |exo@next@end |else
+        |if@answers |ans@write [|exo@arg]|fi
+      |fi]
+|gdef |ans@testarg#1|END[|ans@dotest#1 |relax|relax\end{|relax}|END]
+|egroup
+
+
+\def\ans@copytoend
+  {\uninputencoding
+   \let \do \@makeother \dospecials \obeylines\ans@copy@first}
+{\obeylines%
+\gdef \ans@copy#1
+  {\def\exo@arg{#1}\ans@testarg#1\END\exo@next}%
+\gdef \ans@copy@first#1
+  {\def \@test{#1}\let \exo@next \ans@copy%
+   \ifx \@test \empty \else \def\exo@arg{#1}\ans@testarg#1\END\fi%
+   \exo@next}%
+}
+
+\def \AnswerSection {\section}
+\newcommand{\reallyinputanswers}{\@answers@sometrue\inputanswers}
+\newcommand{\IfSomeAnswer}
+  {\if@answer@some \let \@do \@firstoftwo \else
+   \let \@do \@secondoftwo \fi \@do}
+\newcommand{\inputanswers}[2][\exo@filename]
+ {\if@answers \if@answer@later \if@answer@some
+    \AnswerSection {#2}%
+    \immediate \write \ans@channel {\string \endinput}%
+    \immediate \closeout \ans@channel
+%    \@input {\exo@filename .ans}%
+    \bgroup
+    \newread \ans@read
+    \openin \ans@read \exo@filename.ans
+       \ifeof \ans@read
+          \message {*** Warning! No answers to exercices}\closein  \ans@read
+       \else \closein \ans@read
+       \message {Including answers to exercices}\input \exo@filename.ans
+       \fi 
+     \egroup
+     \global \let \open@ans \ans@reopen
+  \fi \fi \fi}
+
+\def \AnswerSubsection{\subsection*}
+
+\def \AnswerContinued #1#2#3{\egroup
+  \bgroup
+  \par \goodbreak
+  \noindent\AnswerSubsection 
+      {\exo@hypertarget {Ans-#1.#2}{\ExerciseName}~\exo@hyperlink
+         {Exo-#1}{#1 (continued)}}
+}
+\def \AnswerNew #1#2#3{\egroup
+  \bgroup
+  \par \goodbreak
+  \noindent\AnswerSubsection
+      {\exo@hypertarget {Ans-#1.#2}{\ExerciseName}~\exo@hyperlink
+            {Exo-#1}{#1, page #3}}}
+\newcommand {\ExerciseNew}[4]{\setcounter {Exercise}{#1}}
+
+
+%%%% extension
+
+
+% \newanswer{name}
+%     {before-begin}{after-begin}
+%     {fragile-insertion}
+%     [number-of-args][default-value]{before-end}{after-end}
+
+\newcommand {\NewQuestion}[2]
+   {\setcounter {Exercise}{#1}\setcounter {Question}{#2}%
+    \exo@hypertarget {Ans-#1.#2}{}}
+\def \AnswerLink #1{\exo@hyperlink {Ans-\theExercise.\theQuestion}{#1}}
+\def \ExerciseLink #1{\exo@hyperlink {Exo-\theExercise}{#1}}
+
+\newcommand {\newanswer}[7]
+ {\newenvironment {exo-#1}{#3}{#4}\relax
+  \newenvironment {now-#1}{#5}{#6}\relax
+  \newenvironment {#1}[2][#2]
+      {\def \exo@answer@env {#1}%
+       \edef \AnswerName{##1}%
+       \setkeys{answer}{##2}%
+       \if@answers 
+         \if@answer@later
+           \global\@answer@sometrue
+           \ifin@exercise
+             \stepcounter{Question}%
+             \ans@write
+                  {\string \NewQuestion {\theExercise}{\theQuestion}}%
+           \fi
+           \ans@write{\string \begin{ans-#1}#7}%
+           \csname exo-#1\endcsname
+         \else
+           \expandafter \let \expandafter \exo@let \csname endnow-#1\endcsname
+           \expandafter \let \csname end#1\endcsname \exo@let
+           \expandafter \let \expandafter \exo@let \csname now-#1\endcsname
+           \let \ans@copytoend \exo@let
+         \fi
+       \fi 
+       \ans@copytoend
+       }
+      {\if@answers 
+          \csname endexo-#1\endcsname \ans@write{\string \end{ans-#1}}\fi
+      }\relax
+  \newenvironment {ans-#1}}
+
+\newcommand {\AnswerNiceLink}[1][\AnswerName]
+    {\if@answer@anchor \@ifundefined {hyperlink}{}
+         {\unskip \nobreak\hfil\penalty50\hskip 1em \hbox{}\nobreak
+          \hskip 0em plus 1filll 
+          \AnswerLink{\hbox {#1}}%
+          \nobreak
+          \hskip 1em\penalty -10000}\fi}
+
+% \newanswer {myanswer}{\AnswerName}
+%    {\em \AnswerNiceLink}
+%    {}
+%    {\AnswerNow}
+%    {\endAnswerNow}
+%    {{\thepage}}
+%    [1]
+%    {\ifnum \theQuestion=1\relax 
+%       \subsection* {\ExerciseLink {Exercise \theExercise, page #1}}%
+%     \else
+%       \subsubsection* 
+%          {\ExerciseLink {Exercice \theExercise\space (continued)}}%
+%     \fi}
+%    {}
+
+%%% So as to make a list of all exercises
+
+\let \exo@chap \exo@empty
+\def \exo@lparen{(}
+\def \exo@diff {\futurelet \exo@next\exo@@diff}
+\def \exo@@diff
+  {\ifx \exo@next (\let \@do \exo@@diff@ \else \def \@do {\rlap{}\qquad}\fi
+   \@do}
+\def \exo@@diff@ (#1){\rlap {#1}\qquad\ignorespaces}
+
+\newcommand {\ExerciseItem}[4]
+  {\def \@test {#2}\ifx \@test \exo@chap\else
+   \gdef \exo@chap {#2}\medskip\noindent{\bf 
+      \@ifundefined {chaptername}{Chapter}{\chaptername}
+      \exo@chap}\par \smallskip  \nopagebreak 
+   \parindent 0em \fi
+   \noindent\hbox to 5em {\exo@hyperlink{Exo-#1}{#1, {\it #3}}\hfil}%
+   \exo@diff #4\par}
+
+\newcommand{\ListOfExercises}[1][\chapter {\huge List of all exercises}]
+   {\newpage
+    \@mkboth {\MakeUppercase {List of all exercises}}
+             {\MakeUppercase {List of all exercises}}
+    \null
+    \medskip
+    #1
+    \null
+
+    \smallskip
+    \bgroup 
+      \let \ExerciseNew \ExerciseItem
+      \parindent 0em
+      \newread \ans@read
+      \openin \ans@read \exo@filename.loe
+      \ifeof \ans@read
+        \message {*** Warning! No List of Exercices}\closein \ans@read
+        \else \closein \ans@read
+        \message {Including List Of Exercises}\input \exo@filename.loe
+      \fi 
+    \egroup}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\@ifundefined{whizzy@makelineno}{}{%
+  \def \setline@answer
+   {\whizzy@makelineno \ans@write
+      {\string \SourceFile {\whizzy@curfile}%
+       \string \SetLineno {\the\whizzy@count}}}%
+  \AtBeginAnswer{\setline@answer}%
+%%   \def \exo@inside@answer 
+%%    {\ifnum \the\inputlineno<\whizzy@line}
+%%   \AtBeforeAnswer{\check@inside@answer}%
+}
