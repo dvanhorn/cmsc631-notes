@@ -27,6 +27,7 @@
 \newcommand\mbool{b}
 
 \newcommand\mexp{e}
+\newcommand\merr{r}
 
 \newcommand\beval[3]{{#1} \vdash {#2} \Downarrow {#3}}
 
@@ -237,8 +238,10 @@ $\Arith$ is to use a BNF grammar:
 
 \[
 \begin{array}{lrcll}
-% \Arith 
-               & e & ::= & i & \text{where }i\in\mathbb{Z}\\ 
+\mathbb{Z} 
+               & \mint & ::= & \dots\ |\ -1\ |\ 0\ |\ 1\ |\ \dots\\
+ \Arith 
+               & e & ::= & i \\ % & \text{where }i\in\mathbb{Z}\\ 
                &   & |   & \Pred(e)\\
                &   & |   & \Succ(e)\\
                &   & |   & \Plus(e,e)\\
@@ -246,9 +249,19 @@ $\Arith$ is to use a BNF grammar:
 \end{array}
 \]
 
+In both of these definitions, the occurrences of ``$\mint$'' and
+``$\mexp$'' are occurrences of \deftech{meta-variables}---the are
+variables in the language describing the programming language (in this
+case $\Arith$).  The describing language itself (in this case it is
+math, but often it is another programming language) is called the
+\deftech{meta-language}, while the described languaged ($Arith$) is
+called the \deftech{object-language}.  By convention, the name of a
+meta-variable signals the set of values it ranges over.  So for example
+a meta-variable $\mint$ may refer to $5$ or $17$, but never $\Succ(3)$.
+
 Yet another notation for defining exactly the same set is to use
 inference rules, which is a two-dimensional notation for writing
-implications.  The general form of an \deftech{inference} rule is:
+implications.  The general form of an \deftech{inference rule} is:
 \begin{mathpar}
 \inferrule{H_1 \\ H_2 \\ \dots \\ H_n }{C}
 \end{mathpar}
@@ -381,8 +394,8 @@ well.
 To be truly pedantic, we should add hypotheses to each of inference
 rules that state $e \in \Arith$ and $i \in \mathbb{Z}$ and so
 on.  The convention that you'll frequently see, and which is used in
-these notes, is that certain metavariables range only over a
-restricted set of values.  So if you see the metavariable ``$e$'', you
+these notes, is that certain meta-variables range only over a
+restricted set of values.  So if you see the meta-variable ``$e$'', you
 can reasonably read it as $e$ such that $e \in \Arith$.  If
 you see $e$ being used as something that is not an arithmetic
 expression, then it's a mistake.  Likewise, $i$ and $j$ range only
@@ -409,6 +422,19 @@ proof that $\Plus(4,\Succ(2)) \Downarrow 7$.
           {\Plus(4,\Succ(2)) \Downarrow 7}
 \end{mathpar}
 
+When reading these inference rules, it's important to notice that the
+right hand side of the evaluation relation is a mathematical
+expression that denotes an integer; not a peice of syntax.  As the
+previous example shows, $\Plus(4,\Succ(2))$ evaluates to $7$; not a
+representation of the expression ``4+(2+1)''.  If it helps to see
+this, a completely equivalent formulation of, for example, the $\Plus$
+rule that stress evaluation produces a single integer is:
+\begin{mathpar}
+\inferrule{\mexp_1 \Downarrow \mint \\ \mexp_2 \Downarrow j \\ k = i+j}
+{\Plus(\mexp_1,\mexp_2) \Downarrow k}
+\end{mathpar}
+
+
 Evaluation is defined as a relation, but it is actually a special case
 of a relation: it is a function.  Can you convince yourself of this?
 That is, can you prove that if $e \Downarrow i$ and $e \Downarrow j$,
@@ -434,11 +460,13 @@ The evaluator can be used as a calculator for arithmetic expressions:
 
 The above semantics are called a ``\deftech{big-step}'' or ``\deftech{natural}''
 semantics.  It has a simple correspondence with a structurally
-recursive functional program.  It has the nice property that proofs
-about program evaluation are compositional.  The meaning of a program
-is given by the irreducible value it produces, so the semantics tells
-you \emph{what} a program evaluates to.  If the ``what'' is all you
-are interested in, then this semantics is adequate.
+recursive functional program.
+% It has the nice property that proofs about program evaluation are
+% compositional.
+The meaning of a program is given by the irreducible value it
+produces, so the semantics tells you \emph{what} a program evaluates
+to.  If the ``what'' is all you are interested in, then this semantics
+is adequate.
 
 This brings up several questions.  What is a semantics for?  Why would
 one semantics be preferred over another?  What other kind of semantics
@@ -462,7 +490,7 @@ to properties of interest.
 With that in mind, let's investigate a semantics that informs of each
 of the steps a computation goes through toward reaching a value.  This
 is useful for determing, for example, if two programs reach the same
-state, or in which order are operations performed during a
+intermediate state, or in which order are operations performed during a
 computation.  In other words, such a semantics would tell us more
 about \emph{how} a program evaluates.
 
@@ -553,7 +581,7 @@ $\step$.  The \deftech{reflexive closure} of a relation $\mathbf{r}
 such that $x\in X \Rightarrow x \mathop{\mathbf{r}'} x$ and $x_1 \in X
 \wedge x_2 \in X \wedge x_1 \mathop{\mathbf{r}} x_2 \Rightarrow x_1
 \mathop{\mathbf{r}'} x_2$.  In other words, the reflexive closure of
-$\mathbf{r}$ relates everying thing in $\mathbf{r}$ plus it relates
+$\mathbf{r}$ relates every thing in $\mathbf{r}$ plus it relates
 everything to itself.  The reflexive closure of $\step$ captures the
 notion of ``steps in zero or one step.''  The \deftech{transitive
   closure} of a relation $\mrel \subseteq X \times X$ is a relation
@@ -582,11 +610,11 @@ results in the following set of inference rules:
 The above semantics are a ``\deftech{small-step}'' or
 ``\deftech{reduction}'' semantics.  Unlike the natural semantics, the
 reduction semantics accounts for each step of a computation.  Although
-its immaterial for the $\Arith$ language, the small-step approach has
+it's immaterial for the $\Arith$ language, the small-step approach has
 some advantages over big-step (as we should expect considering it is
-considerable more involved); one of the most important advantages
-comes into play when the object language is sufficient powerful to
-include non-terminating computations.  Since the natural semantics are
+considerably more involved); one of the most important advantages
+comes into play when the object language is sufficiently powerful to
+include non-terminating computations.  Since the natural semantics is
 concerned only with final answers, it doesn't say much about
 non-terminating programs, while reduction semantics can still be used
 to reason about the (infinite) steps of such a computation.
@@ -621,7 +649,7 @@ Is $\reduce$ a function?  Is $\step$?  In each case, either
 \end{exercise}
 
 \begin{exercise}
-The $\step$ relation codifies that notion of ``takes exactly one step
+The $\step$ relation codifies the notion of ``takes exactly one step
 of arithmetic reduction.'' In other words, any proof tree of $e \step
 e'$ involves exactly one use of the $\reduce$ rule. (You could prove
 this if you'd like.)  In terms of grade-school arithmetic, this is the
@@ -758,7 +786,7 @@ which $\Arith$ ain't.
 But as we enrich languages, we must also enrich our models.
 %
 Let's look at a minimal increment to the $\Arith$ language and what it
-enails for our models.
+entails for our models.
 %
 Let's add a new binary operator, $\Div$, which performs integer
 division.
@@ -832,7 +860,8 @@ errors:
 \[
 \begin{array}{llcl}
 \mathit{Val} & \mval & = & \mbool\ |\ \mint\\
-\mathit{Ans} & \mans & = & \mval\ |\ \Err_\ell
+\mathit{Ans} & \mans & = & \mval\ |\ \merr\\
+\mathit{Err} & \merr & = & \Err_\ell \text{ where $\ell$ is in some set}
 \end{array}
 \]
 We'll assume there are an infinite number of different errors and
@@ -846,7 +875,10 @@ is modelled as a ternary relation $(\cdot \vdash \cdot \Downarrow
 The result of evaluation should be an answer, so the natural semantics
 is a relation $\Downarrow_\menv\; \subseteq \Barith \times
 \mathit{Ans}$, indexed by an environment $\menv$ mapping variables to
-values.  Values are self evaluating. Variables evaluate to the value
+values.  Environments are partial maps from variables to environments
+and $\dom(\menv) = \{ \mvar\ |\ \menv(\mvar) = \mval \text{ for some
+}\mval \}$.
+Values are self evaluating. Variables evaluate to the value
 given by the environment, or an error if undefined:
 \begin{mathpar}
 \inferrule{\ }
@@ -881,8 +913,9 @@ evaluates to a non-numeric value:
 \begin{mathpar}
 \inferrule{\beval\menv{\mexp_1}\mint
   \\ \beval\menv{\mexp_2}\moint
-  \\ \moint \neq 0}
-          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\lfloor \mint / \moint \rfloor}}
+  \\ \moint \neq 0
+  \\ k = \lfloor \mint / \moint \rfloor}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{k}}
 
 \inferrule{\beval\menv{\mexp_1}\mint
   \\ \beval\menv{\mexp_2}\moint
@@ -911,8 +944,8 @@ non-Boolean value:
           {\beval\menv{\If(e_1,e_2,e_3)}{\Err_{\If}}}
 \end{mathpar}
 The remaining rules for $\Succ$, $\Pred$, $\Plus$, and $\Mult$ are
-straightforward following the same pattern as above: when given
-numeric arguments, they do the obvious thing; when given non-numeric
+straightforward following the same pattern as above: when their
+arguments evaluate to numbers, they do the obvious thing; when given non-numeric
 arguments, they produce errors.
 
 While the above rules take care of creating errors when they arise, no
@@ -921,11 +954,11 @@ should expect $\Eq(\Div(3,0),4)$ to produce a divide by zero error,
 although as it stands the semantics is undefined.  Adding the
 following rules propagates errors from subexpressions in $\Eq$:
 \begin{mathpar}
-\inferrule{\beval\menv{\mexp_1}\Err}
-          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\Err}
+\inferrule{\beval\menv{\mexp_1}\merr}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\merr}
 
-\inferrule{\beval\menv{\mexp_2}\Err}
-          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\Err}
+\inferrule{\beval\menv{\mexp_2}\merr}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\merr}
 \end{mathpar}
 We need similar rules for all of the remaining syntactic constructors.
 %% ,
@@ -938,6 +971,7 @@ We need similar rules for all of the remaining syntactic constructors.
 %% Why?  (Hint: think about the last example $\Barith$ program you were
 %% asked to ponder.)
 
+\paragraph{Properties of the semantics:}
 Now that the semantics is in place, let's step back and consider some
 of its properties.  The addition of errors has significantly
 complicated the formal development---we had to add a bunch of rules
@@ -953,23 +987,23 @@ formulated them, have also caused an important change to our
 semantics.  Unlike in the error-free case of $\Arith$, our evaluation
 relation is no longer a function.  To see this, consider
 $\Eq(\Div(3,0),\False)$.  This expression either produces a divide by
-zero error, or a type error for giving a Boolean to $\Eq$.  This is
-concerning for anyone who wants to write an interpreter for, or reason
-about, $\Barith$ programs.  If we were writing an interpreter, we
-should wonder ``what should it produce for $\Eq(\Div(3,0),\False)$?''
-One answer is an interpreter only has to find \emph{some} answer that
-is consistent with the semantics; so if $\syntax{eval}\; \menv\; \mexp
-= \mval$, then $\beval\menv\mexp\mval$, but the reverse direction
-would not hold (the interpreter then, is an abstraction of the natural
-semantics).  Many languages take this approach.  Haskell for example,
-uses an imprecise exception
+zero error ($\Err_{\Div0}$), or a type error ($\Err_\If$) for giving a
+Boolean to $\Eq$.  This is concerning for anyone who wants to write an
+interpreter for, or reason about, $\Barith$ programs.  If we were
+writing an interpreter, we should wonder ``what should it produce for
+$\Eq(\Div(3,0),\False)$?''  One answer is an interpreter only has to
+find \emph{some} answer that is consistent with the semantics; so if
+$\syntax{eval}\; \menv\; \mexp = \mval$, then $\beval\menv\mexp\mval$,
+but the reverse direction would not hold (the interpreter then, is an
+abstraction of the natural semantics).  Many languages take this
+approach.  Haskell for example, uses an imprecise exception
 semantics\footnote{\url{http://research.microsoft.com/en-us/um/people/simonpj/papers/imprecise-exn.htm}},
 basically following the outline we have above.  Other languages choose
 to \emph{specify} which error should be signalled by determinism the
-language and restoring the functional nature of evaluation.  
+language and restoring the functional nature of evaluation.
 
 The thing leading to the observed non-determinism of the evaluator is
-the overlap in hypothesis in inference rules.  Consider the error
+the overlap in hypothesis in the different inference rules.  Consider the error
 propogation rules for $\Eq$.  It's possible that
 $\beval\menv{\mexp_1}\mbool$ \emph{and}
 $\beval\menv{\mexp_2}{\mbool'}$, thus either rule could apply leading
@@ -991,12 +1025,12 @@ generation and propogation:
            \beval\menv{\mexp_2}\mbool }
           {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq2}}}
 
-\inferrule{\beval\menv{\mexp_1}\Err_\ell}
-          {\beval\menv{\If(\mexp_1,\mexp_2)}\Err_\ell}
+\inferrule{\beval\menv{\mexp_1}\merr}
+          {\beval\menv{\If(\mexp_1,\mexp_2)}\merr}
 
 \inferrule{\beval\menv{\mexp_1}\mval \\
-           \beval\menv{\mexp_2}\Err_\ell}
-          {\beval\menv{\If(\mexp_1,\mexp_2)}\Err_\ell}
+           \beval\menv{\mexp_2}\merr}
+          {\beval\menv{\If(\mexp_1,\mexp_2)}\merr}
 \end{mathpar}
 
 \begin{exercise}
@@ -1022,7 +1056,7 @@ One minor tweak is that we will need to include $\Err$s in the syntax
 of $\Barith$ programs to model reduction:
 \[
 \begin{array}{llcl}
-\mathit{Exp} & \mexp & = & \dots\ |\ \Err_\ell
+\mathit{Exp} & \mexp & = & \dots\ |\ \merr
 \end{array}
 \]
 With this in place, the axioms are straightforward:
@@ -1039,8 +1073,8 @@ With this in place, the axioms are straightforward:
   \inferrule{i\neq j}
             {\breduce\menv{\Eq(i,j)}\False}
 
-  \inferrule{j\neq 0}
-            {\breduce\menv{\Div(i,j)}{\lfloor i/j \rfloor}}
+  \inferrule{j\neq 0 \\ k = \lfloor i/j \rfloor}
+            {\breduce\menv{\Div(i,j)}{k}}
 
   \inferrule{\ }
             {\breduce\menv{\Div(i,0)}{\Err_{\Div0}}}
@@ -1074,10 +1108,10 @@ And we need rules for propagating errors (shown for $\Eq$, remaining
 syntactic constructors are similar):
 \begin{mathpar}
 \inferrule{\ }
-          {\breduce\menv{\Eq(\Err_\ell,\mexp)}{\Err_\ell}}
+          {\breduce\menv{\Eq(\merr,\mexp)}{\merr}}
 
 \inferrule{\ }
-          {\breduce\menv{\Eq(\mexp,\Err_\ell)}{\Err_\ell}}
+          {\breduce\menv{\Eq(\mexp,\merr)}{\merr}}
 \end{mathpar}
 
 We can now define $\bstepname$ as the compatible closure of
