@@ -800,7 +800,7 @@ $\morel(x)$.
 \subsection{A Little More Cheese on the Pizza}
 
 The $\Arith$ language is about as simple a programming language as
-your likely to find, although it served us well in demonstrating many
+you're likely to find, although it served us well in demonstrating many
 of the core ideas behind syntax and semantics.
 %
 As programmers, we like programming in rich, expressive languages, 
@@ -829,7 +829,7 @@ programs run on given inputs.  We'll call this language $\Barith$ to
 distinguish it from $\Arith$.
 
 The syntax of $\Barith$ is straightfoward to define.  We add a couple
-nullary constructors for Booleans, a binary constructor for eqaulity
+nullary constructors for Booleans, a binary constructor for equality
 and for division, and a ternary constructor for conditionals.  For
 variables, we assume there is an infinite, enumerable set of variable
 names, $\Var$, and use lower-case, italic names to denote elements of
@@ -893,16 +893,14 @@ write subscripts to distinguish them ($\ell$ ranges over these subscripts).
 
 Since evaluation now depends on an environment, the natural semantics
 is modelled as a ternary relation $(\cdot \vdash \cdot \Downarrow
-\cdot) \subseteq (\mathit{Var} \rightharpoonup \mathit{Val})\times \Barith \times \mathit{Ans}$.
-
-The result of evaluation should be an answer, so the natural semantics
-is a relation $\Downarrow_\menv\; \subseteq \Barith \times
-\mathit{Ans}$, indexed by an environment $\menv$ mapping variables to
-values.  Environments are partial maps from variables to environments
-and $\dom(\menv) = \{ \mvar\ |\ \menv(\mvar) = \mval \text{ for some
-}\mval \}$.
-Values are self evaluating. Variables evaluate to the value
-given by the environment, or an error if undefined:
+\cdot) \subseteq (\mathit{Var} \rightharpoonup \mathit{Val})\times
+\Barith \times \mathit{Ans}$.  The relation includes an
+\deftech{environment} which maps variables to values.  Environments,
+ranged over by meta-variable $\menv$, are partial functions from
+variables to environments and $\dom(\menv) = \{ \mvar\ |\ \menv(\mvar)
+= \mval \text{ for some }\mval \}$.  Values are self
+evaluating. Variables evaluate to the value given by the environment,
+or an error if undefined:
 \begin{mathpar}
 \inferrule{\ }
           {\beval\menv\mval\mval}
@@ -1022,7 +1020,7 @@ abstraction of the natural semantics).  Many languages take this
 approach.  Haskell for example, uses an imprecise exception
 semantics\footnote{\url{http://research.microsoft.com/en-us/um/people/simonpj/papers/imprecise-exn.htm}},
 basically following the outline we have above.  Other languages choose
-to \emph{specify} which error should be signalled by determinism the
+to \emph{specify} which error should be signalled by determinizing the
 language and restoring the functional nature of evaluation.
 
 The thing leading to the observed non-determinism of the evaluator is
