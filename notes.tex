@@ -376,6 +376,7 @@ member of the $\Arith$ set:
 
 
 \subsection{Natural Semantics}
+\label{sec:natural}
 
 
 Perhaps the simplest semantics we can give arithmetic expressions is
@@ -1257,6 +1258,8 @@ not desirable.  Moreover, even if a system is consistent, we often
 want to reason about a particular strategy for reducing programs; we
 often want a \emph{standard reduction relation}.
 
+\subsubsection{Standard Reduction for $\Arith$}
+
 Let's first develop a standard reduction relation, $\astdstep$, for
 $\Arith$.  The idea here is to make the one-step reduction relation a
 function by standardizing the reduction strategy:
@@ -1331,6 +1334,87 @@ $\Plus(\mval,\mectx)$ says ``after the left side is value, reduce the
 right side.''  So when you see $\Plus(\mexp_1,\mexp_2)$, you know all
 of the reductions will first happen for $\mexp_1$, and only after
 there are no more will all of the reductions for $\mexp_2$ happen.
+
+
+\subsubsection{Standard Reduction for $\Arith$ in OCaml}
+
+We can model evaluation contexts as a data type in OCaml:
+\begin{verbatim}
+type ecxt  = Hole
+           | EPred of ecxt
+           | ESucc of ecxt
+           | EPlusL of ecxt * arith
+           | EPlusR of int * ecxt
+           | EMultL of ecxt * arith
+           | EMultR of int * ecxt
+\end{verbatim}
+The function to plug an expression into a context is straightforward:
+\begin{verbatim}
+let rec plug (c : ecxt) (e : arith) : arith =
+  match c with
+    Hole -> e
+  | EPred c -> Pred (plug c e)
+  | ESucc c -> Succ (plug c e)
+  | EPlusL (c, e') -> Plus (plug c e, e')
+  | EPlusR (i, c) -> Plus (Int i, plug c e)
+  | EMultL (c, e') -> Mult (plug c e, e')
+  | EMultR (i, c) -> Mult (Int i, plug c e)
+\end{verbatim}
+Decomposing a program into an evaluation context and a potential redex
+is easy too, although decomposition is undefined on values, so we
+need to model decompose as a partial function:
+\begin{verbatim}
+let rec decompose (e : arith) : (ecxt * arith) option =
+  match e with
+    Int i -> None
+  | Pred (Int i) -> Some (Hole, e)
+  | Succ (Int i) -> Some (Hole, e)
+  | Plus (Int i, Int j) -> Some (Hole, e)
+  | Mult (Int i, Int j) -> Some (Hole, e)
+  | Pred e -> 
+    let Some (c', e') = decompose e in Some (EPred c', e')
+  | Succ e -> 
+    let Some (c', e') = decompose e in Some (ESucc c', e')
+  | Plus (Int i, e) -> 
+    let Some (c', e') = decompose e in Some (EPlusR (i, c'), e')
+  | Plus (e, e2) ->
+    let Some (c', e') = decompose e in Some (EPlusL (c', e2), e')
+  | Mult (Int i, e) -> 
+    let Some (c', e') = decompose e in Some (EMultR (i, c'), e')
+  | Mult (e, e2) -> 
+    let Some (c', e') = decompose e in Some (EMultL (c', e2), e')
+\end{verbatim}
+This code relies on the following (easy to prove) fact that if an
+expression is not a value, then it decomposes into an evaluation
+context and potential redex.  This means the non-exhaustive pattern
+matching warnings the compiler emits are spurious.
+
+The evaluation function just iterates the decompose, reduce, plug
+process until a value is reached:
+\begin{verbatim}
+let rec eval (e : arith) : int =
+  match e with
+    Int i -> i
+  | _ -> 
+    let Some (c, e') = decompose e in
+    let Some r = reduce e' in
+    eval (plug c r)
+\end{verbatim}
+In {\tt decompose e} we know that {\tt e} is not a value, so {\tt
+  decompose} is defined on {\tt e} (i.e.~we cannot get {\tt None}),
+and further more, {\tt e'} is a redex, hence {\tt reduce e'} is
+defined, so none of these pattern matches can fail.
+
+A quick ``proof by example'' confirms that {\tt eval} produces the
+same results as the OCaml implementation of the natural semantics from
+section~\ref{sec:natural}:
+\begin{verbatim}
+# eval (Plus (Int 4, Succ (Int 2)));;
+- : int = 7
+\end{verbatim}
+
+
+\subsubsection{Standard Reduction for $\Barith$}
 
 This approach scales up to more complicated languages, too.  To define
 a standard reduction semantics for $\Barith$, the notion of evaluation
@@ -1421,6 +1505,7 @@ Implement the standard reduction relation as a function in OCaml.
 Implement an interpreter for $\Barith$ by iterating the standard
 reduction relation until an answer is produced.
 \end{exercise}
+
 
 
 %% \subsection{Equational Theories of Programs}
