@@ -26,8 +26,14 @@
 \newcommand\moint{j}
 \newcommand\mbool{b}
 
+\newcommand\plug[2]{#1[#2]}
+
 \newcommand\mexp{e}
 \newcommand\merr{r}
+
+\newcommand\hole{\Box}
+\newcommand\mctx{\mathcal{C}}
+\newcommand\mectx{\mathcal{E}}
 
 \newcommand\beval[3]{{#1} \vdash {#2} \Downarrow {#3}}
 
@@ -47,15 +53,30 @@
 \newcommand\Div{\mathit{Div}}
 
 \newcommand\reduce{\mathop{\mathbf{a}}}
+
+\newcommand\areducename{\mathbf{a}}
+\newcommand\areduce[2]{#1\;\areducename\;#2}
+
 \newcommand\step{\rightarrow_\mathbf{a}}
 \newcommand\multistep{\rightarrow^\star_\mathbf{a}}
 
 
+
+\newcommand\astdstep{\longmapsto_{\reduce}}
+
 \newcommand\breducename{\mathbf{b}}
+\newcommand\bvreducename{\mathbf{bv}}
 \newcommand\bstepname{\rightarrow_{\breducename}}
 \newcommand\bmultistepname{\rightarrow^\star_{\breducename}}
 
-\newcommand\breduce[3]{#1 \vdash {#2}\;\mathbf{b}\; {#3}}
+\newcommand\bmultistep[3]{#1\vdash #2\;\bmultistepname\;#3}
+\newcommand\bvstdstep[3]{#1\vdash #2\;{\longmapsto_{\bvreducename}}\;#3}
+\newcommand\bvstdmultistep[3]{#1\vdash #2\;{\longmapsto^\star_{\bvreducename}}\;#3}
+
+\newcommand\breduce[3]{#1 \vdash {#2}\;\breducename\; {#3}}
+\newcommand\bvreduce[3]{#1 \vdash {#2}\;\bvreducename\; {#3}}
+\newcommand\bstep[3]{#1 \vdash {#2}\;\rightarrow_{\breducename}\; {#3}}
+\newcommand\bclosedstep[2]{{#1}\;\rightarrow_{\breducename}\; {#2}}
 
 \newcommand\laxparstep{\rightrightarrows_\mathbf{a}}
 \newcommand\maxparstep{\rightrightarrows'_\mathbf{a}}
@@ -252,12 +273,13 @@ $\Arith$ is to use a BNF grammar:
 In both of these definitions, the occurrences of ``$\mint$'' and
 ``$\mexp$'' are occurrences of \deftech{meta-variables}---the are
 variables in the language describing the programming language (in this
-case $\Arith$).  The describing language itself (in this case it is
-math, but often it is another programming language) is called the
-\deftech{meta-language}, while the described languaged ($Arith$) is
+case $\Arith$).  The describing language itself (in this case math,
+but often it is another programming language) is called the
+\deftech{meta-language}, while the described languaged ($\Arith$) is
 called the \deftech{object-language}.  By convention, the name of a
-meta-variable signals the set of values it ranges over.  So for example
-a meta-variable $\mint$ may refer to $5$ or $17$, but never $\Succ(3)$.
+meta-variable signals the set of values it ranges over.  So for
+example a meta-variable $\mint$ may refer to $5$ or $17$, but never
+$\Succ(3)$.
 
 Yet another notation for defining exactly the same set is to use
 inference rules, which is a two-dimensional notation for writing
@@ -373,25 +395,25 @@ well.
 
 \begin{mathpar}
 \inferrule{\ }
-          {i \Downarrow i}
+          {\mint \Downarrow \mint}
 
-\inferrule{e \Downarrow i}
-          {\Pred(i) \Downarrow i-1}
+\inferrule{\mexp \Downarrow \mint}
+          {\Pred(\mexp) \Downarrow \mint-1}
 
-\inferrule{e \Downarrow i}
-          {\Succ(i) \Downarrow i+1}
+\inferrule{\mexp \Downarrow \mint}
+          {\Succ(\mexp) \Downarrow \mint+1}
 
-\inferrule{e_1 \Downarrow i\\ e_2 \Downarrow j}
-          {\Plus(e_1,e_2) \Downarrow i+j}
+\inferrule{\mexp_1 \Downarrow i\\ \mexp_2 \Downarrow \moint}
+          {\Plus(\mexp_1,\mexp_2) \Downarrow \mint+\moint}
 
-\inferrule{e_1 \Downarrow i\\ e_2 \Downarrow j}
-          {\Mult(e_1,e_2) \Downarrow i\cdot j}
+\inferrule{\mexp_1 \Downarrow \mint\\ \mexp_2 \Downarrow \moint}
+          {\Mult(\mexp_1,\mexp_2) \Downarrow \mint\cdot \moint}
 \end{mathpar}
 
 
 \paragraph{Note on notation:} 
 %
-To be truly pedantic, we should add hypotheses to each of inference
+To be truly pedantic, we should add hypotheses to each of the inference
 rules that state $e \in \Arith$ and $i \in \mathbb{Z}$ and so
 on.  The convention that you'll frequently see, and which is used in
 these notes, is that certain meta-variables range only over a
@@ -408,7 +430,7 @@ the leftmost rule.  If an expression $e$ evaluates to an integer $i$,
 then $\Succ(e)$ evaluates to $i+1$ as shown in the second
 rule.  The remaining rules are similar.
 
-The proof that an expression evaluates to some integer can given as a
+The proof that an expression evaluates to some integer can be given as a
 proof tree using these inference rules.  For example, here is the
 proof that $\Plus(4,\Succ(2)) \Downarrow 7$.
 
@@ -428,7 +450,7 @@ expression that denotes an integer; not a peice of syntax.  As the
 previous example shows, $\Plus(4,\Succ(2))$ evaluates to $7$; not a
 representation of the expression ``4+(2+1)''.  If it helps to see
 this, a completely equivalent formulation of, for example, the $\Plus$
-rule that stress evaluation produces a single integer is:
+rule that stresses evaluation produces a single integer is:
 \begin{mathpar}
 \inferrule{\mexp_1 \Downarrow \mint \\ \mexp_2 \Downarrow j \\ k = i+j}
 {\Plus(\mexp_1,\mexp_2) \Downarrow k}
@@ -477,7 +499,7 @@ could there possible be?
 A semantics is useful for establishing properties of programs.  There
 are all kinds of properties of programs, so there are all kinds of
 semantics of programs; just like math or logic, there is no ``one true
-semantics''.  The program properties of interest depend on what you
+semantics.''  The program properties of interest depend on what you
 are trying to accomplish.  Are you trying to write a correct
 interpreter?  The natural semantics is probably what you need since it
 tells you what value the interpreter should produce.  Are you trying
@@ -487,7 +509,7 @@ about cost.  Ditto if you want to prove a program can run forever
 without using all available memory.  So a semantics should be tailored
 to properties of interest.
 
-With that in mind, let's investigate a semantics that informs of each
+With that in mind, let's investigate a semantics that informs us of each
 of the steps a computation goes through toward reaching a value.  This
 is useful for determing, for example, if two programs reach the same
 intermediate state, or in which order are operations performed during a
@@ -496,25 +518,25 @@ about \emph{how} a program evaluates.
 
 Fundamentally, we do this like before: by specifying relations on
 syntax.  But instead of defining a ``evaluates to'' relation, we
-define a ``steps to'' relation $\reduce$ that captures the basic laws of
-arithmetic reduction.  The new relation does not relate expressions to
-integers, but instead relates expressions to expressions, i.e.~$\reduce
-\subseteq \Arith \times \Arith$.  The meaning of
-related expressions $e_1$ and $e_2$ is that $e_1$ reduces in one step
-to $e_2$.
+define a ``steps to'' relation $\areducename$ that captures the basic
+laws of arithmetic reduction.  The new relation does not relate
+expressions to integers, but instead relates expressions to
+expressions, i.e.~$\areducename \subseteq \Arith \times \Arith$.  The
+meaning of related expressions $e_1$ and $e_2$ is that $e_1$ reduces
+in one step to $e_2$.
 
 \begin{mathpar}
 \inferrule*{\ }
-          {\Pred(i) \reduce i-1}
+          {\areduce{\Pred(\mint)}{\mint-1}}
 
 \inferrule*{\ }
-          {\Succ(i) \reduce i+1}
+          {\areduce{\Succ(\mint)}{\mint+1}}
 
 \inferrule*{\ }
-          {\Plus(i,j) \reduce i+j}
+          {\areduce{\Plus(\mint,\moint)}{\mint+\moint}}
 
 \inferrule*{\ }
-          {\Mult(i,j) \reduce i\cdot j}
+          {\areduce{\Mult(\mint,\moint)}{\mint\cdot\moint}}
 
 \end{mathpar}
 
@@ -575,7 +597,7 @@ arriving at a final answer.
 
 If we'd like to capture the notion of ``$e$ steps to $e'$ in any
 number of steps,'' we can define yet another relation, $\multistep\;
-\in \Arith\times\Arith$, as the reflexive, transitive closure of
+\subseteq \Arith\times\Arith$, as the reflexive, transitive closure of
 $\step$.  The \deftech{reflexive closure} of a relation $\mathbf{r}
 \subseteq X \times X$ is a relation $\mathbf{r}' \subseteq X \times X$
 such that $x\in X \Rightarrow x \mathop{\mathbf{r}'} x$ and $x_1 \in X
@@ -1134,14 +1156,284 @@ relation explicitly without just using the compatible closure of the axioms.
 
 \subsection{Reduction in Context}
 
-[TODO]
+When an expression reduces, there is a subexpression being reduced
+according to a reduction axiom.  This occurs with the context of a
+surrounding expression.  We can formalize the notion of context
+and by doing so, enable new kinds of reductions.
 
-\subsection{Equational Theories of Programs}
+A \deftech{context} can be thought of as an expression with a hole in
+it, which is just a term in the following language:
+\[
+\begin{array}{llcl}
+\mathit{Context} & \mctx & = & \hole \\
+                 &       & | & \Pred(\mctx)\ |\ \Succ(\mctx)\\
+                 &       & | & \Plus(\mctx,\mexp)\ |\ \Plus(\mexp,\mctx)\\
+                 &       & | & \Mult(\mctx,\mexp)\ |\ \Mult(\mexp,\mctx)\\
+                 &       & | & \Eq(\mctx,\mexp)\   |\ \Eq(\mexp,\mctx)\\
+                 &       & | & \Div(\mctx,\mexp)\ |\ \Div(\mexp,\mctx)\\
+                 &       & | & \If(\mctx,\mexp,\mexp)\ |\ \If(\mexp,\mctx,\mexp)\ |\ \If(\mexp,\mexp,\mctx)
+\end{array}
+\]
+A context is either a hole, written ``$\hole$,'' or it's a term
+constructor with a context in place of a subexpression.  An expression
+can be plugged into a context to obtain another expression, which is
+written ``$\plug\mctx\mexp$,'' which means ``replace the occurrence of
+$\hole$ in $\mctx$ with $\mexp$.'' To be more formal, the plug
+function is defined as:
+\begin{align*}
+\plug\hole\mexp &= \mexp\\
+\plug{\Pred(\mctx)}\mexp &= \Pred(\plug\mctx\mexp)\\
+\plug{\Succ(\mctx)}\mexp &= \Succ(\plug\mctx\mexp)\\
+\plug{\Mult(\mctx,\mexp')}\mexp &= \Mult(\plug\mctx\mexp,\mexp')\\
+\plug{\Mult(\mexp',\mctx)}\mexp &= \Mult(\mexp',\plug\mctx\mexp)\\
+\dots
+\end{align*}
+The notation ``$\plug\mctx\mexp$'' is also overloaded to mean ``an
+expression $\mexp'$ such that $\mexp' = \plug\mctx\mexp$.''  We say
+$\mexp'$ can be ``decomposed'' into $\mctx$ and $\mexp$.
 
-[TODO]
+This notation allows us to give an alternative, but equivalent,
+formulation of the compatible closure of $\breducename$ as:
+\begin{mathpar}
+\inferrule*[Right=reduce]{\breduce\menv\mexp{\mexp'}}
+          {\bstep\menv{\plug\mctx\mexp}{\plug\mctx{\mexp'}}}
+\end{mathpar}
+This rule states: ``if an expression can be decomposed into a context
+$\mctx$ with $\mexp$ in the hole, and $\mexp$ reduces to $\mexp'$ by
+the reduction axiom, then the program steps to $\mctx$ with $\mexp'$
+plugged in the hole.''
+
+This context-based formulation may seem like just a somewhat more
+compact notation for specifying the tedious compatibility inference
+rules that allow reduction to happen inside of subexpressions, but it
+also does something more signficant: it gives a name to the context in
+which a reduction occurs; naming something gives us control
+it.\footnote{Computer science is in many ways the science of
+  names.}  To see an example, consider how programs produce errors
+in our reduction semantics.  We have some expression, say
+$\Plus(3,\Mult(2,\Div(5,0)))$, which introduces an error on the next
+step and then step by step propagates the error outward until it is
+the final answer:
+\begin{mathpar}
+\bclosedstep{\bclosedstep{\bclosedstep{\Plus(3,\Mult(2,\Div(5,0)))}{\Plus(3,\Mult(2,\Err_{\Div0}))}}
+  {\Plus(3,\Err_{\Div0})}}
+            {\Err_{\Div0}}
+\end{mathpar}
+Not only was achieving this step-by-step bubbling up of errors tedious
+because it required a bunch of reduction axioms of the form
+$\Mult(\mexp,\Err_\ell)\;\bstepname\Err_\ell$, we might also want to
+model the behavior of an error as a single step to a final error
+state:
+\begin{mathpar}
+{\Plus(3,\Mult(2,\Err_{\Div0}))} \;\bstepname'\;
+{\Err_{\Div0}}
+\end{mathpar}
+These expressions are not related by $\bstepname$ but definining such
+a single step relation is straightforward with a contextual
+formulation:
+\begin{mathpar}
+\inferrule*[Right=abort]{\ }
+          {\bstep\menv{\plug\mctx{\Err_\ell}}{\Err_\ell}}
+\end{mathpar}
+The abort rule says if an error occurs in some context, we can discard
+the context and immediately produce the final answer, which is the
+error.  With this rule in place, we can remove all of the error
+propagation axioms.  We're left with the ``real'' computational
+axioms, the reduce rule, and the abort rule.
+
+
+\subsection{Standard Reduction}
+
+The reduction semantics for both $\Arith$ and $\Barith$ allow a single
+program to reduce by multiple different strategies.  In the case of
+$\Arith$, it's easy to prove that the semantics are
+\deftech{consistent}, i.e. if a program reduces to two different
+expressions, those expressions can be reduced further to some common
+expression.  This is what establishes, for example that the
+$\downarrow$ relation is a function.  This is not the case for
+$\Barith$, which is inconsistent---we can arrive at two totally
+different answers by calculating in different orders.  That's usually
+not desirable.  Moreover, even if a system is consistent, we often
+want to reason about a particular strategy for reducing programs; we
+often want a \emph{standard reduction relation}.
+
+Let's first develop a standard reduction relation, $\astdstep$, for
+$\Arith$.  The idea here is to make the one-step reduction relation a
+function by standardizing the reduction strategy:
+
+\begin{mathpar}
+\inferrule{\areduce\mexp{\mexp'}}
+          {\mexp \astdstep \mexp'}
+
+\inferrule{\mexp_1 \astdstep \mexp_1'}
+          {\Plus(\mexp_1,\mexp_2) \astdstep \Plus(\mexp_1',\mexp_2)}
+
+\inferrule{\mexp \astdstep \mexp'}
+          {\Plus(\mval,\mexp) \astdstep \Plus(\mval,\mexp')}
+
+\inferrule{\mexp_1 \astdstep \mexp_1'}
+          {\Mult(\mexp_1,\mexp_2) \astdstep \Mult(\mexp_1',\mexp_2)}
+
+\inferrule{\mexp \astdstep \mexp'}
+          {\Mult(\mval,\mexp) \astdstep \Mult(\mval,\mexp')}
+
+\inferrule{\mexp \astdstep \mexp'}
+          {\Succ(\mexp) \astdstep \Succ(\mexp')}
+
+\inferrule{\mexp \astdstep \mexp'}
+          {\Pred(\mexp) \astdstep \Pred(\mexp')}
+\end{mathpar}
+
+Notice that none of the rules overlap.  To see the latter, consider a
+more elaborate, but equivalent formulation of the rules for $\Mult$:
+\begin{mathpar}
+\inferrule{\mexp_1 \astdstep \mexp_1' \\ \mexp_1 \not\in \mathit{Val}}
+          {\Mult(\mexp_1,\mexp_2) \astdstep \Mult(\mexp_1',\mexp_2)}
+
+\inferrule{\mexp \astdstep \mexp' \\ \mexp \not\in \mathit{Val}}
+          {\Mult(\mval,\mexp) \astdstep \Mult(\mval,\mexp')}
+\end{mathpar}
+The added hypotheses are in fact redundant because $\mexp \astdstep
+{\mexp'}$ implies $\mexp$ is not a value, but it's now to easy to see
+by case analysis that at most one rule applies to an expression of the
+form $\Mult(\mexp_1,\mexp_2)$ because either $e_1$ is not a value, in
+which case the leftmost rule applies, or $e_1$ is a value, but $e_2$
+is not, in which case the rightmost rule applies, or both $\mexp_1$
+and $\mexp_2$ are values, in which case the $\areducename$ rule
+applies.
+
+The rules for reducing inside expressions are not quite compatibility
+rules because they do not allow a reduction axiom to be apply to
+\emph{any} subexpression.  Instead, they encode a \deftech{reduction
+  strategy} that specifies the one subexpression where an axiom may be
+applied.  This same strategy can also be defined through the use of
+contexts, but instead of using arbitrary contexts, we will specify the
+subset of contexts in which reduction may occur.  These contexts are
+called \emph{evaluation contexts}:
+\[
+\begin{array}{llcl}
+\mathit{EvalContext} & \mectx & = & \hole \\
+                 &       & | & \Pred(\mectx)\ |\ \Succ(\mectx)\\
+                 &       & | & \Plus(\mectx,\mexp)\ |\ \Plus(\mval,\mectx)\\
+                 &       & | & \Mult(\mectx,\mexp)\ |\ \Mult(\mval,\mectx)\\
+\end{array}
+\]
+And standard reduction is just:
+\begin{mathpar}
+\inferrule{\areduce\mexp{\mexp'}}
+          {\plug\mectx\mexp \astdstep \plug\mectx{\mexp'}}
+\end{mathpar}
+
+It's possible to read off the reduction strategy from the grammar.
+For example, the production $\Plus(\mectx,\mexp)$ says ``until the
+left side of $\Plus$ is a value, reduce the left side of $\Plus$'' and
+$\Plus(\mval,\mectx)$ says ``after the left side is value, reduce the
+right side.''  So when you see $\Plus(\mexp_1,\mexp_2)$, you know all
+of the reductions will first happen for $\mexp_1$, and only after
+there are no more will all of the reductions for $\mexp_2$ happen.
+
+This approach scales up to more complicated languages, too.  To define
+a standard reduction semantics for $\Barith$, the notion of evaluation
+contexts includes everything from $\Arith$, plus:
+\[
+\begin{array}{llcl}
+\mathit{EvalContext} & \mectx & = & \dots \\
+                 &       & | & \Eq(\mectx,\mexp)\ |\ \Eq(\mectx,\mexp)\\
+                 &       & | & \Div(\mectx,\mexp)\ |\ \Div(\mectx,\mexp)\\
+                 &       & | & \If(\mectx,\mexp,\mexp)
+\end{array}
+\]
+Note that only the test position of an $\If$ expression is an
+evaluation context. This forces $\If$ to first evaluate the test
+before evaluating the consequent or alternative, which prevents, for
+example, $\If(\False,\Err_{\Div0},4)$ from producing an error.
+
+We not quite done though because there's another source of
+non-determinism in $\Barith$, which stems from the reduction axioms.
+We need to replace the following axioms:
+\begin{mathpar}
+  \inferrule{\ }
+            {\breduce\menv{\Eq(\mexp,\mbool)}{\Err_{\Eq2}}}           
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(\mexp,\mbool)}{\Err_{\Div2}}}           
+\end{mathpar}
+with the following $\bvreducename \subset \breducename$ axiom:
+\begin{mathpar}
+  \inferrule{\ }
+            {\bvreduce\menv{\Eq(\mval,\mbool)}{\Err_{\Eq2}}}
+
+  \inferrule{\ }
+            {\bvreduce\menv{\Div(\mval,\mbool)}{\Err_{\Div2}}}           
+\end{mathpar}
+The $\bvreducename$ variant is like $\breducename$ except it requires
+the left subexpression to be a value; in other words the axiom can
+only be applied once the left expression has been reduced.  (We assume
+$\bvreducename$ is otherwise just like $\breducename$.)
+
+The standard reduction relation is then:
+\begin{mathpar}
+\inferrule{\bvreduce\menv\mexp{\mexp'}}
+          {\bvstdstep\menv{\plug\mectx\mexp}{\plug\mectx{\mexp'}}}
+
+\inferrule{\ }
+          {\bvstdstep\menv{\plug\mectx{\Err_\ell}}{\Err_\ell}}
+\end{mathpar}
+
+The standard semantics has the following desirable properties:
+\begin{enumerate}
+\item it is a function,
+\[
+\bvstdstep\menv\mexp{\mexp'} \wedge 
+\bvstdstep\menv\mexp{\mexp''} \Rightarrow \mexp'=\mexp''\text,
+\]
+\item if the standard semantics produces an answer, the reduction semantics does too,
+\[
+\bvstdmultistep\menv\mexp\mans \Rightarrow \bmultistep\menv\mexp\mans\text,
+\]
+
+\item if the reduction semantics produces a \emph{value}, the standard semantics does too,
+\[
+\bmultistep\menv\mexp\mval \Rightarrow 
+\bvstdmultistep\menv\mexp\mval\text.
+\]
+\end{enumerate}
+Our goal with the standard semantics was to settle on a canonical
+strategy for reducing programs.  The properties above tell us that
+this canonical strategy (1) can find an answer by iteration, (2) never
+produces something inconsistent with the semantics, and (3) always
+finds a ``good'' (i.e. non-erroneous) result, if there is one.
+
+These two properties tell us the standard semantics we have is a good
+basis for the specification of an interpreter.  Since the canonical
+reduction strategy is often what we are concerned with when reasoning
+about programs, most PL papers formulate only the standard reduction
+and are not concerned with what could be called the ``calculus'' of
+their language, which allows for reduction in all subexpressions of a
+program.
+
+\begin{exercise}
+Prove the desirable properties of the standard reduction relation.
+\end{exercise}
+
+\begin{exercise}
+Implement the standard reduction relation as a function in OCaml.
+Implement an interpreter for $\Barith$ by iterating the standard
+reduction relation until an answer is produced.
+\end{exercise}
+
+
+%% \subsection{Equational Theories of Programs}
+
+%% [TODO]
 
 % 72
 % 20-30 term 1, bus
+
+\appendix
+\section{Acknowledgments}
+
+Thanks to Michael Hicks and Becca MacKenzie for comments and catching errors.
 
 \end{document}
 
