@@ -1,0 +1,491 @@
+\section{Variables, Conditionals, Booleans, \& Errors}
+
+The $\Arith$ language is about as simple a programming language as
+you're likely to find, although it served us well in demonstrating many
+of the core ideas behind syntax and semantics.
+%
+As programmers, we like programming in rich, expressive languages, 
+which $\Arith$ ain't.
+%
+But as we enrich languages, we must also enrich our models.
+%
+Let's look at a minimal increment to the $\Arith$ language and what it
+entails for our models.
+%
+Let's add a new binary operator, $\Div$, which performs integer
+division.
+%
+Let's add a new binary operator, $\Eq$, which determines if two
+integers are equal.
+%
+Since an answer to the question ``are these two numbers equal?'' is
+either a yes or a no, let's add a new kind of value, Booleans, to the
+language to represent such answers.
+%
+Booleans are useful for conditionally selecting computations, let's
+add a conditional form, $\If(e_1,e_2,e_3)$, which will select $e_2$
+when $e_1$ evaluates to $\True$ and $e_3$ when it evaluates to
+$\False$.  Finally, for good measure, let's throw in variables so that
+programs run on given inputs.  We'll call this language $\Barith$ to
+distinguish it from $\Arith$.
+
+The syntax of $\Barith$ is straightfoward to define.  We add a couple
+nullary constructors for Booleans, a binary constructor for equality
+and for division, and a ternary constructor for conditionals.  For
+variables, we assume there is an infinite, enumerable set of variable
+names, $\Var$, and use lower-case, italic names to denote elements of
+that set.  Two variables are considered ``the same'' if they are
+spelled the same:
+
+\[
+\begin{array}{llcl}
+\mathit{Var} & \mvar & = & \s{x}\ |\ \s{y}\ |\ \s{z}\ |\ \dots \\
+\mathit{Bool} & \mbool & = & \True\ |\ \False\\
+\Barith & e & = & \mvar\ |\ \mbool\ |\ \Eq(e,e)\ |\ \Div(e,e)\ |\ \If(e,e,e)\\
+        &   & | & \mint\ |\ \Pred(e)\ |\ \Succ(e)\ |\ \Plus(e,e)\ |\ \Mult(e,e)
+\end{array}
+\]
+
+
+
+Before delving into the details of the semantics, it's worth taking
+time to ponder over a few $\Barith$ programs and think informally
+about what they should mean:
+
+\begin{enumerate}\setlength{\itemsep}{0pt}
+\item $\s{x}$
+\item $\Eq(\False,7)$
+\item $\Div(7,0)$
+\item $\If(4,1,2)$
+\item $\If(\False,\Div(7,0),3)$
+\end{enumerate}
+
+Let's take the first one.  What should $\s{x}$ mean?  Consider this
+question in the context of a mathematical formula: $x^2+4$.  What does
+$x$ mean here?  The answer is: it depends.  You can answer the
+question without first giving a meaning to the variable.  So $x^2+4$
+means $13$ when $x=3$ and it means $29$ when $x=5$.  The meaning of
+the formula varies with the meaning of the variable.  The same should
+be true for our programming language.
+
+What about $\Eq(\False,7)$?  Here you could make different design
+choices.  You might follow the JavaScript approach and produce false
+since $\False$ is different than $7$.  Or maybe true because the
+pointer representation of $7$ and $\False$ turn out to be the same.
+Or maybe you return $42$, because why not?  Or you might do something
+sensible and raise an error because a numerical operator was applied
+to the wrong kind of argument.  Likewise for $\Div(7,0)$ and
+$\If(4,1,2)$; the right thing is to signal an error.  But what does
+that mean for the semantic model?
+
+\subsection{Natural Semantics for Imprecise Errors}
+
+Let's identify a set of \emph{values} and a set of \emph{answers}.
+Values include integers and Booleans.  Answers include values and
+errors:
+\[
+\begin{array}{llcl}
+\mathit{Val} & \mval & = & \mbool\ |\ \mint\\
+\mathit{Ans} & \mans & = & \mval\ |\ \merr\\
+\mathit{Err} & \merr & = & \Err_\ell \text{ where $\ell$ is in some set}
+\end{array}
+\]
+We'll assume there are an infinite number of different errors and
+write subscripts to distinguish them ($\ell$ ranges over these subscripts).
+
+
+Since evaluation now depends on an environment, the natural semantics
+is modelled as a ternary relation $(\cdot \vdash \cdot \Downarrow
+\cdot) \subseteq (\mathit{Var} \rightharpoonup \mathit{Val})\times
+\Barith \times \mathit{Ans}$.  The relation includes an
+\deftech{environment} which maps variables to values.  Environments,
+ranged over by meta-variable $\menv$, are partial functions from
+variables to environments and $\dom(\menv) = \{ \mvar\ |\ \menv(\mvar)
+= \mval \text{ for some }\mval \}$.  Values are self
+evaluating. Variables evaluate to the value given by the environment,
+or an error if undefined:
+\begin{mathpar}
+\inferrule{\ }
+          {\beval\menv\mval\mval}
+
+\inferrule{\menv(\mvar) = \mval}
+          {\beval\menv\mvar\mval}
+
+\inferrule{\mvar \notin \dom(\menv)}
+          {\beval\menv\mvar{\Err_{\mvar}}}
+\end{mathpar}
+Equality is defined as you might expect, producing true when its
+arguments evaluate the same number, false when they evaluate to
+different numbers, and an error when they evaluate to non-numbers:
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint = \moint}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\True}
+
+\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint \neq \moint}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\False}
+
+\inferrule{\beval\menv{\mexp_1}\mbool}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq1}}}
+
+\inferrule{\beval\menv{\mexp_2}\mbool}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq2}}}
+\end{mathpar}
+Division performs the integer division of its arguments when they
+evaluate to numeric values and the denominator is non-zero; it
+produces an error when the denominator is zero or either argument
+evaluates to a non-numeric value:
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\mint
+  \\ \beval\menv{\mexp_2}\moint
+  \\ \moint \neq 0
+  \\ k = \lfloor \mint / \moint \rfloor}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{k}}
+
+\inferrule{\beval\menv{\mexp_1}\mint
+  \\ \beval\menv{\mexp_2}\moint
+  \\ \moint = 0}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div0}}}
+
+\inferrule{\beval\menv{\mexp_1}\mbool}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div1}}}
+
+\inferrule{\beval\menv{\mexp_2}\mbool}
+          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div2}}}
+\end{mathpar}
+Conditionals select which value to produce based on the evaluation of
+the test expression, and produce an error if the test produces a
+non-Boolean value:
+\begin{mathpar}
+\inferrule{\beval\menv{e_1}\True \\
+  \beval\menv{e_2}\mans}
+          {\beval\menv{\If(e_1,e_2,e_3)}\mans}
+
+\inferrule{\beval\menv{e_1}\False \\
+  \beval\menv{e_3}\mans}
+          {\beval\menv{\If(e_1,e_2,e_3)}\mans}
+
+\inferrule{\beval\menv{e_1}\mint}
+          {\beval\menv{\If(e_1,e_2,e_3)}{\Err_{\If}}}
+\end{mathpar}
+The remaining rules for $\Succ$, $\Pred$, $\Plus$, and $\Mult$ are
+straightforward following the same pattern as above: when their
+arguments evaluate to numbers, they do the obvious thing; when given non-numeric
+arguments, they produce errors.
+
+While the above rules take care of creating errors when they arise, no
+rules have dealt with the propagation of errors.  For example, we
+should expect $\Eq(\Div(3,0),4)$ to produce a divide by zero error,
+although as it stands the semantics is undefined.  Adding the
+following rules propagates errors from subexpressions in $\Eq$:
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\merr}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\merr}
+
+\inferrule{\beval\menv{\mexp_2}\merr}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\merr}
+\end{mathpar}
+We need similar rules for all of the remaining syntactic constructors.
+%% ,
+%% with the exception of $\If$.  For $\If$, only the following rule is
+%% added:
+%% \begin{mathpar}
+%% \inferrule{\beval\menv{\mexp_1}\Err}
+%%           {\beval\menv{\If(\mexp_1,\mexp_2,\mexp_3)}\Err}>
+%% \end{mathpar}
+%% Why?  (Hint: think about the last example $\Barith$ program you were
+%% asked to ponder.)
+
+\paragraph{Properties of the semantics:}
+Now that the semantics is in place, let's step back and consider some
+of its properties.  The addition of errors has significantly
+complicated the formal development---we had to add a bunch of rules
+for signal and propogating errors.  But dealing with errors and
+establishing the meaning of errors is a crucial aspect of semantic
+engineering.  Remember that a semantics is useful for definining
+properties of programs, and one of the more useful properties is
+``this program causes no errors.''  So to even talk about this, we
+need to confront error behaviors in the semantics.
+
+But beyond the additional rules, errors, at least as we have
+formulated them, have also caused an important change to our
+semantics.  Unlike in the error-free case of $\Arith$, our evaluation
+relation is no longer a function.  To see this, consider
+$\Eq(\Div(3,0),\False)$.  This expression either produces a divide by
+zero error ($\Err_{\Div0}$), or a type error ($\Err_\If$) for giving a
+Boolean to $\Eq$.  This is concerning for anyone who wants to write an
+interpreter for, or reason about, $\Barith$ programs.  If we were
+writing an interpreter, we should wonder ``what should it produce for
+$\Eq(\Div(3,0),\False)$?''  One answer is an interpreter only has to
+find \emph{some} answer that is consistent with the semantics; so if
+$\syntax{eval}\; \menv\; \mexp = \mval$, then $\beval\menv\mexp\mval$,
+but the reverse direction would not hold (the interpreter then, is an
+abstraction of the natural semantics).  Many languages take this
+approach.  Haskell for example, uses an imprecise exception
+semantics\footnote{\url{http://research.microsoft.com/en-us/um/people/simonpj/papers/imprecise-exn.htm}},
+basically following the outline we have above.  Other languages choose
+to \emph{specify} which error should be signalled by determinizing the
+language and restoring the functional nature of evaluation.
+
+\subsection{Natural Semantics for Precise Errors}
+
+The thing leading to the observed non-determinism of the evaluator is
+the overlap in hypothesis in the different inference rules.  Consider the error
+propogation rules for $\Eq$.  It's possible that
+$\beval\menv{\mexp_1}\mbool$ \emph{and}
+$\beval\menv{\mexp_2}{\mbool'}$, thus either rule could apply leading
+to distinct answers.  By grade school analogy, it's as if the answer
+to a basic algebra problem depended on the order in which you
+simplified terms.  A solution then is to specify more rigorously the
+order in which subexpressions should be evaluated, which can be
+achieved by making the hypotheses of the inference rules
+non-overlapping.  For example, if we want to evaluate $\Eq$
+expressions left-to-right, we can use the following rules for error
+generation and propogation:
+
+\begin{mathpar}
+\inferrule{\beval\menv{\mexp_1}\mbool \\
+           \beval\menv{\mexp_2}\mval}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq1}}}
+
+\inferrule{\beval\menv{\mexp_1}\mint \\
+           \beval\menv{\mexp_2}\mbool }
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq2}}}
+
+\inferrule{\beval\menv{\mexp_1}\merr}
+          {\beval\menv{\If(\mexp_1,\mexp_2)}\merr}
+
+\inferrule{\beval\menv{\mexp_1}\mval \\
+           \beval\menv{\mexp_2}\merr}
+          {\beval\menv{\If(\mexp_1,\mexp_2)}\merr}
+\end{mathpar}
+
+\begin{exercise}
+Implement an interpreter for the imprecise error semantics as a
+function in OCaml.  Your interpreter is free to produce any answer
+that is consistent with the semantics.
+\end{exercise}
+
+\begin{exercise}\label{ex:determ}
+Following the idea above, develop an alternative semantics for
+$\Barith$ that is deterministic, i.e.  the evaluation relation is a
+function.  Prove that it is in fact a function.  Implement this
+function in OCaml.  Is this function a satisfying solution to the
+previous problem?
+\end{exercise}
+
+
+\subsection{A Consistent Syntactic Theory}
+
+Now that we've seen the complications errors introduce in the setting
+of natural semantics, let's look at the same development using
+reduction semantics.
+
+First, we will need to include $\Err$s in the syntax of $\Barith$
+programs to model reduction:
+\[
+\begin{array}{llcl}
+\mathit{Exp} & \mexp & = & \dots\ |\ \merr
+\end{array}
+\]
+With this in place, many of the axioms are straightforward:
+\begin{mathpar}
+  \inferrule{\menv(\mvar) = \mval}
+            {\breduce\menv\mvar\mval}
+
+  \inferrule{\mvar \notin \dom(\menv)}
+            {\breduce\menv\mvar{\Err_\mvar}}
+
+  \inferrule{i=j}
+            {\breduce\menv{\Eq(i,j)}\True}
+
+  \inferrule{i\neq j}
+            {\breduce\menv{\Eq(i,j)}\False}
+
+  \inferrule{j\neq 0 \\ k = \lfloor i/j \rfloor}
+            {\breduce\menv{\Div(i,j)}{k}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(i,0)}{\Err_{\Div0}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\If(\True,\mexp_1,\mexp_2)}{\mexp_1}}
+
+  \inferrule{\ }
+            {\breduce\menv{\If(\False,\mexp_1,\mexp_2)}{\mexp_2}}
+
+\end{mathpar}
+We also need rules for creating type errors.  Some are straightforward,
+such as branching on an integer instead of a Boolean:
+\begin{mathpar}
+  \inferrule{\ }
+            {\breduce\menv{\If(i,\mexp_1,\mexp_2)}{\Err_\If}}
+\end{mathpar}
+But we would be wrong to add the following axioms for $\Eq$ and
+$\Div$:
+\begin{mathpar}
+  \inferrule{\ }
+            {\breduce\menv{\Eq(\mbool,\mexp)}{\Err_{\Eq1}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Eq(\mexp,\mbool)}{\Err_{\Eq2}}}           
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(\mbool,\mexp)}{\Err_{\Div1}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(\mexp,\mbool)}{\Err_{\Div2}}}           
+\end{mathpar}
+The problem with these rules is they would immediately make the
+syntactic theory inconsistent and identify all errors as equal.  For
+example, we can have $\breduce\relax{\Eq(\Err_1,\Err_2)}{\Err_1}$ and
+$\breduce\relax{\Eq(\Err_1,\Err_2)}{\Err_2}$, which induces the
+equivalence $\vdash\Err_1 =_\breducename \Err_2$.  We also have to be
+careful with how errors are propagated.  At first glance, you might
+think to propagate errors past each of the syntactic constructors.  So
+for example, you might have the following propagation rules for $\Eq$,
+and similar rules for all the other constructors:
+\begin{mathpar}
+\inferrule{\ }
+          {\breduce\menv{\Eq(\merr,\mexp)}{\merr}}
+
+\inferrule{\ }
+          {\breduce\menv{\Eq(\mexp,\merr)}{\merr}}
+\end{mathpar}
+But this also causes inconsistency.  Moreover, any two programs which
+contain or may reduce to errors would be equated in the theory.
+That's not a useful equational theory.
+
+Instead, we want to limit the $\breducename$ relation in the following
+way.  In order for a type error to be created, the subexpressions must
+be values:
+\begin{mathpar}
+  \inferrule{\ }
+            {\breduce\menv{\Eq(\mbool,\mval)}{\Err_{\Eq1}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Eq(\mbool,\mval)}{\Err_{\Eq2}}}           
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(\mbool,\mval)}{\Err_{\Div1}}}
+
+  \inferrule{\ }
+            {\breduce\menv{\Div(\mval,\mbool)}{\Err_{\Div2}}}
+\end{mathpar}
+Likewise, when propagating errors, we only allow propagation
+when subexpressions to the left of the error are values:
+\begin{mathpar}
+\inferrule{\ }
+          {\breduce\menv{\Eq(\merr,\mexp)}{\merr}}
+
+\inferrule{\ }
+          {\breduce\menv{\Eq(\mval,\merr)}{\merr}}
+\end{mathpar}
+The remaining rules for $\Pred$, $\Succ$, $\Div$, $\Plus$, and $\Mult$
+are similar.  One notable exception is $\If$.  We only allow errors to
+propagate past an $\If$ if the error occurs in the test position:
+\begin{mathpar}
+\inferrule{\ }
+          {\breduce\menv{\If(\merr,\mexp_1,\mexp_2)}{\merr}}
+\end{mathpar}
+
+
+
+
+We can now define $\bstepname$ as the compatible closure of
+$\breducename$ over the grammar of $\Barith$ expressions,
+$\bmultistepname$ as the reflexive transitive closure of $\bstepname$,
+and $=_\breducename$ as the symmetric closure of $\bmultistepname$.
+
+Note that this theory allows us to reduce inside of $\If$ expressions,
+but if an error occurs, we cannot propogate it out until the test
+expression produces a value and the $\If$ is reduced to the consequent
+or alternative based on it.
+
+\begin{exercise}[Consistency]
+Prove if $\menv \vdash \mexp =_\breducename \mans \mbox{ and } \menv
+\vdash \mexp =_\breducename \mans'$, then $\mans = \mans'$.
+\end{exercise}
+
+
+
+\subsection{Standard Reduction}
+
+The approach of using evaluation contexts to specify canonical
+reductions scales up to more complicated languages such as $\Barith$.
+To define a standard reduction semantics for $\Barith$, the notion of
+evaluation contexts includes everything from $\Arith$, plus:
+\[
+\begin{array}{llcl}
+\mathit{EvalContext} & \mectx & = & \dots \\
+                 &       & | & \Eq(\mectx,\mexp)\ |\ \Eq(\mval,\mectx)\\
+                 &       & | & \Div(\mectx,\mexp)\ |\ \Div(\mval,\mectx)\\
+                 &       & | & \If(\mectx,\mexp,\mexp)
+\end{array}
+\]
+%% Note that only the test position of an $\If$ expression is an
+%% evaluation context. This forces $\If$ to first evaluate the test
+%% before evaluating the consequent or alternative, which prevents, for
+%% example, $\If(\False,\Err_{\Div0},4)$ from producing an error.
+
+The standard reduction relation is defined as:
+\begin{mathpar}
+\inferrule{\breduce\menv\mexp{\mexp'}}
+          {\bstdstep\menv{\plug\mectx\mexp}{\plug\mectx{\mexp'}}}
+\end{mathpar}
+
+
+\begin{exercise}[Standardization]\label{ex:standardization}
+Prove $\bstdmultistep\menv\mexp\mans \iff \bmultistep\menv\mexp\mans$.
+\end{exercise}
+
+\begin{exercise}
+Implement the standard reduction relation as a function in OCaml.
+Implement an interpreter for $\Barith$ by iterating the standard
+reduction relation until an answer is produced.
+\end{exercise}
+
+
+\subsection{Discarding the Context}
+
+When introducing contexts in section~\ref{sec:context} that
+formulating reductions explicitly in terms of contexts gives us
+expressive power to write new kinds of reductions that are difficult
+to do without a context.
+
+To see an example, consider how programs produce errors
+in our reduction semantics.  We have some expression, say
+$\Plus(3,\Mult(2,\Div(5,0)))$, which introduces an error on the next
+step and then step by step propagates the error outward until it is
+the final answer:
+\begin{mathpar}
+\bclosedstep{\bclosedstep{\bclosedstep{\Plus(3,\Mult(2,\Div(5,0)))}{\Plus(3,\Mult(2,\Err_{\Div0}))}}
+  {\Plus(3,\Err_{\Div0})}}
+            {\Err_{\Div0}}
+\end{mathpar}
+Achieving this step-by-step bubbling up of errors tedious because it
+required a bunch of reduction axioms of the form
+$\Mult(\mval,\Err_\ell)\;\breducename\;\Err_\ell$.
+%
+We can avoid the propagating reductions and intermediate steps in the
+standardized semantics.  Let $\breducename'$ be $\breducename$ without
+any error propagation rules.  Then standard reduction can be defined
+by the following two inference rules:
+\begin{mathpar}
+\inferrule{\menv\vdash\mexp\;\breducename'\;{\mexp'}}
+          {\bstdstep\menv{\plug\mectx\mexp}{\plug\mectx{\mexp'}}}
+
+\inferrule{\ }
+          {\bstdstep\menv{\plug\mectx{\Err_\ell}}{\Err_\ell}}
+\end{mathpar}
+The example now immediately jumps to the final error state:
+\begin{mathpar}
+\bstdstep\menv{\Plus(3,\Mult(2,\Err_{\Div0}))}
+              {\Err_{\Div0}}
+\end{mathpar}
+
+
+\begin{exercise}
+Reprove the standardization theorem (exercise~\ref{ex:standardization})
+for this alternative standard reduction relation.
+\end{exercise}
+
