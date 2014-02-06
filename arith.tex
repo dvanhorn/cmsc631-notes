@@ -158,7 +158,7 @@ earlier mathematical definition\footnote{Already a lie has crept in:
 language:
 %
 \begin{verbatim}
-   type arith = Num of int 
+   type arith = Int of int 
               | Pred of arith
               | Succ of arith
               | Plus of arith * arith
@@ -166,14 +166,14 @@ language:
 \end{verbatim}
 The only difference, which is inconsequential, is that OCaml, unlike
 math, requires unions to be formed by disjoint types, so integers must
-be ``tagged'' with the \syntax{Num} constructor to make them distinct
+be ``tagged'' with the \syntax{Int} constructor to make them distinct
 from integers.
 
 We can rely on the type system of OCaml to verify when a value is a
 member of the $\Arith$ set:
 \begin{verbatim}
-   # Plus (Num 4, Succ (Num 2));;
-   - : arith = Plus (Num 4, Succ (Num 2))
+   # Plus (Int 4, Succ (Int 2));;
+   - : arith = Plus (Int 4, Succ (Int 2))
 \end{verbatim}
 
 
@@ -270,7 +270,7 @@ syntax:
 \begin{verbatim}
    let rec eval (e : arith) : int = 
        match e with
-         Num i -> i
+         Int i -> i
        | Pred e -> (eval e) - 1
        | Succ e -> (eval e) + 1        
        | Plus (e1, e2) -> (eval e1) + (eval e2)
@@ -279,7 +279,7 @@ syntax:
 
 The evaluator can be used as a calculator for arithmetic expressions:
 \begin{verbatim}
-   # eval (Plus (Num 4, Succ (Num 2)));;
+   # eval (Plus (Int 4, Succ (Int 2)));;
    - : int = 7
 \end{verbatim}
 
