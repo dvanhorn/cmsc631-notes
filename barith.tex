@@ -490,9 +490,10 @@ and similar rules for all the other constructors:
 \inferrule{\ }
           {\envreduce{\Eq(\mexp,\merr)}\prop{\merr}}
 \end{mathpar}
-But this also causes inconsistency.  Moreover, any two programs which
-contain or may reduce to errors would be equated in the theory.
-That's not a useful equational theory.
+But this also causes inconsistency.  Moreover, any program which
+\emph{syntactically} contains an error expression (or an expression
+that reduces to an error) would be equated with that error in the
+theory.  That's not a useful equational theory.
 
 Instead, we want to limit the $\err$ relation in the following
 way.  In order for a type error to be created, the subexpressions must
