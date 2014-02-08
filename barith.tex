@@ -6,7 +6,8 @@
 \newcommand\std[1]{\longmapsto_{#1}}
 \newcommand\multistd[1]{\longmapsto^\star_{#1}}
 
-\newcommand\berr{\mathbf{be}}
+\newcommand\bep{\mathbf{bep}}
+\newcommand\be{\mathbf{be}}
 
 \newcommand\envreduce[4][\menv]{#1 \vdash {#2\;#3\;#4}}
 
@@ -525,12 +526,12 @@ propagate past an $\If$ if the error occurs in the test position:
 \end{mathpar}
 
 We can now define a small-step reduction relation.  Let's call it
-$\compat\berr$ to distinguish it from $\bstepname$.  We define
-$\compat\berr$ as the compatible closure of $(\breducename\; \cup\; \err\;
+$\compat\bep$ to distinguish it from $\bstepname$.  We define
+$\compat\bep$ as the compatible closure of $(\breducename\; \cup\; \err\;
 \cup\; \prop)$ over the grammar of $\Barith$ expressions;
-$\multicompat\berr$ is the reflexive transitive closure of
-$\compat\berr$, and $=_\berr$ as the symmetric closure of
-$\multicompat\berr$.
+$\multicompat\bep$ is the reflexive transitive closure of
+$\compat\bep$, and $=_\bep$ as the symmetric closure of
+$\multicompat\bep$.
 
 Note that this theory allows us to reduce inside of $\If$ expressions,
 but if an error occurs, we cannot propogate it out until the test
@@ -538,12 +539,12 @@ expression produces a value and the $\If$ is reduced to the consequent
 or alternative based on it.
 
 \begin{exercise}[Consistency]
-Prove if $\menv \vdash \mexp =_\berr \mans \mbox{ and } \menv
-\vdash \mexp =_\berr \mans'$, then $\mans = \mans'$.
+Prove if $\menv \vdash \mexp =_\bep \mans \mbox{ and } \menv
+\vdash \mexp =_\bep \mans'$, then $\mans = \mans'$.
 \end{exercise}
 
 \begin{exercise}
-Prove $\envreduce\mexp{\multicompat\berr}\mval \iff \envreduce\mexp{\multicompat\breducename}\mval$.
+Prove $\envreduce\mexp{\multicompat\bep}\mval \iff \envreduce\mexp{\multicompat\breducename}\mval$.
 \end{exercise}
 
 
@@ -554,12 +555,12 @@ change from what has already been defined for $\Barith$, so the
 standard reduction relation can be defined defined as:
 \begin{mathpar}
 \inferrule{\envreduce\mexp{(\breducename\; \cup\; \err\; \cup\; \prop)}{\mexp'}}
-          {\envreduce{\plug\mectx\mexp}{\std\berr}{\plug\mectx{\mexp'}}}
+          {\envreduce{\plug\mectx\mexp}{\std\bep}{\plug\mectx{\mexp'}}}
 \end{mathpar}
 
 
 \begin{exercise}[Standardization]\label{ex:standardization}
-Prove $\envreduce\mexp{\multistd\berr}\mans \iff \envreduce\mexp{\multicompat\berr}\mans$.
+Prove $\envreduce\mexp{\multistd\bep}\mans \iff \envreduce\mexp{\multicompat\bep}\mans$.
 \end{exercise}
 
 \begin{exercise}
@@ -582,9 +583,9 @@ $\Plus(3,\Mult(2,\Div(5,0)))$, which introduces an error on the next
 step and then step by step propagates the error outward until it is
 the final answer:
 \begin{mathpar}
-\Plus(3,\Mult(2,\Div(5,0))) \;\compat\berr\;
-\Plus(3,\Mult(2,\Err_{\Div0})) \;\compat\berr\;
-\Plus(3,\Err_{\Div0}) \;\compat\berr\;
+\Plus(3,\Mult(2,\Div(5,0))) \;\compat\bep\;
+\Plus(3,\Mult(2,\Err_{\Div0})) \;\compat\bep\;
+\Plus(3,\Err_{\Div0}) \;\compat\bep\;
 \Err_{\Div0}
 \end{mathpar}
 Achieving this step-by-step bubbling up of errors tedious because it
@@ -597,21 +598,21 @@ standardized semantics.
 Consider the following alternative standard reduction relation:
 \begin{mathpar}
 \inferrule{\envreduce\mexp{(\breducename\; \cup\; \err)}{\mexp'}}
-          {\envreduce{\plug\mectx\mexp}{\std{\berr'}}{\plug\mectx{\mexp'}}}
+          {\envreduce{\plug\mectx\mexp}{\std{\be}}{\plug\mectx{\mexp'}}}
 
 \inferrule{\mectx \neq \hole }
-          {\envreduce{\plug\mectx{\Err_\ell}}{\std{\berr'}}{\Err_\ell}}
+          {\envreduce{\plug\mectx{\Err_\ell}}{\std{\be}}{\Err_\ell}}
 \end{mathpar}
 The example now immediately jumps to the final error state:
 \begin{mathpar}
 \envreduce{\Plus(3,\Mult(2,\Err_{\Div0}))}
-          {\std{\berr'}}
+          {\std{\be}}
           {\Err_{\Div0}}\text.
 \end{mathpar}
 
 
 \begin{exercise}
-Prove $\envreduce\mexp{\multistd{\berr'}}\mans \iff
-\envreduce\mexp{\multistd{\berr}}\mans$.
+Prove $\envreduce\mexp{\multistd{\be}}\mans \iff
+\envreduce\mexp{\multistd{\bep}}\mans$.
 \end{exercise}
 

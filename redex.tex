@@ -423,3 +423,111 @@ This generates 1000 random examples of {\tt e}s from the language {\tt
   A} and checks the expression, interpreted as a predicate universally
 quantified over the pattern variable {\tt e}.  We can use arbitrary
 patterns in place of {\tt e} to generate other kinds of data.
+
+\subsection{Extending Languages}
+
+Semantics engineers often start with small, simple models and grow
+them over time into more realistic and rich languages.  We've seen
+this with the developmen of $\Arith$ and $\Barith$ already.  Redex
+supports exactly this kind of growth.
+
+First, put the following at the top of the {\tt A} model and save it
+in a file called {\tt A.rkt}.
+\begin{verbatim}
+(provide (all-defined-out))
+\end{verbatim}
+
+In another file, start with:
+\begin{verbatim}
+#lang racket
+(require "A.rkt")
+(require redex/reduction-semantics)
+\end{verbatim}
+This will import all of the defintions form the model for {\tt A}
+
+We can now extend the syntax of {\tt A} to obtain {\tt B}:
+\begin{verbatim}
+(define-extended-language B A
+  (e ::= ....
+     x
+     (Div e e)
+     (Eq e e)
+     (If e e e))
+  (x ::= variable)
+  (v ::= .... b)
+  (b ::= True False) 
+  (ρ ::= ((x v) ...))
+  (E ::= ....
+     (Div E e)
+     (Div v E)
+     (Eq E e)
+     (Eq v E)
+     (If E e e)))
+\end{verbatim}
+
+The reduction relation {\tt a} can be lifted to work on {\tt B}
+expressions and unioned with the new reduction axioms:
+\begin{verbatim}
+(define (b ρ)
+  (union-reduction-relations 
+   (extend-reduction-relation a B)
+   (reduction-relation
+    B
+    (--> x v (where v (lookup ,ρ x)))
+    (--> (Div i j) ,(quotient (term i) (term j))
+         (side-condition (not (zero? (term j)))))    
+    (--> (Eq i i) True)
+    (--> (Eq i j) False
+         (side-condition (not (= (term i) (term j)))))    
+    (--> (If True e_1 e_2) e_1)
+    (--> (If False e_1 e_2) e_2))))
+\end{verbatim}
+Note that this relation is indexed by an environment {\tt ρ}.
+The {\tt lookup} metafunction looks up the value of a given
+variable if it exists, or produced {\tt \#f}:
+\begin{verbatim}
+(define-metafunction B
+  lookup : ρ x -> v or #f
+  [(lookup ((x v) (x_0 v_0) ...) x) v]
+  [(lookup ((x_0 v_0) (x_1 v_1) ...) x) 
+   (lookup ((x_1 v_1) ...) x)]
+  [(lookup () x) #f])
+\end{verbatim}
+
+We can further develop the semantics for errors as a further extension:
+\begin{verbatim}
+(define-extended-language BE B
+  (e ::= .... r)
+  (r ::= (Err variable))
+  (a ::= v r))
+ 
+(define err
+  (reduction-relation 
+   BE
+   (--> (Div i 0) (Err Div0))
+   (--> (Div b v) (Err Div1))
+   (--> (Div v b) (Err Div2))
+   (--> (Eq b v) (Err Eq1))
+   (--> (Eq v b) (Err Eq2))
+   (--> (If i e_1 e_2) (Err If))))
+
+(define prop
+  (reduction-relation
+   BE
+   (--> (Pred r) r)
+   (--> (Succ r) r)
+   (--> (Plus r e) r)
+   (--> (Plus v r) r)
+   (--> (Mult r e) r)
+   (--> (Mult v r) r)
+   (--> (Div r e) r)
+   (--> (Div v r) r)    
+   (--> (Eq r e) r)
+   (--> (Eq v r) r)
+   (--> (If r e_0 e_1) r)))
+
+(define (bep ρ)
+  (union-reduction-relations 
+   (extend-reduction-relation (b ρ) BE)
+   err prop))
+\end{verbatim}
