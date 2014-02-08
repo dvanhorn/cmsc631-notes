@@ -603,8 +603,8 @@ $\morel(x)$.
 \label{sec:context}
 
 When an expression reduces, there is a subexpression being reduced
-according to a reduction axiom.  This occurs with the context of a
-surrounding expression.  We can formalize the notion of context
+according to a reduction axiom.  This occurs within a surrounding
+expression, or \emph{context}.  We can formalize the notion of context
 and by doing so, enable new kinds of reductions.
 
 A \deftech{context} can be thought of as an expression with a hole in
@@ -669,12 +669,22 @@ consistency of the language that no matter which order we choose, if
 we get an answer, it is \emph{the} answer; redoing the calculation in
 another order will not change the final result.
 
-Having a ``calculus of programs'' is important to reason about
-programs, but we would also like to make the calculation of answers
-mechanical.  Doing so consists of establishing a strategy for a
-machine to apply reduction in order to obtain an answer.  This
-strategy is called the \deftech{standard reduction semantics};
-it represent a canonical way in which programs are reduced.
+Having a ``calculus of programs,'' as embodied by the equational
+theory for our language, is important to reason about programs and
+equivalences between them, but when trying to find what a program
+reduces it, it's better if we had a strategy for the mechanical
+calculuation of answers.  For the $\Arith$ language, it's easy to see
+that any strategy will do: as long as you keep reducing something,
+you'll always find the correct answer eventually; it doesn't matter
+what order you go in.  For richer languages, it's not always clear
+that there's a fixed strategy for finding answers (if an answer even
+exists!).
+
+
+Establishing a strategy for the order in which a machine applies
+reduction axioms to obtain an answer is called a \deftech{standard
+  reduction semantics}; it represent a canonical way in which programs
+are reduced.
 
 
 %% This is not the case for $\Barith$, which is inconsistent---we can
@@ -685,8 +695,10 @@ it represent a canonical way in which programs are reduced.
 
 
 Let's develop a standard reduction relation, called $\astdstep$, for
-$\Arith$.  The idea here is to make the one-step reduction relation a
-function by standardizing the reduction strategy:
+$\Arith$.  (Take note of the long barred arrow used here; don't
+confuse the $\longmapsto$ and $\rightarrow$ arrows!) The idea here is
+to make the one-step reduction relation a function by standardizing
+the reduction strategy:
 
 \begin{mathpar}
 \inferrule{\areduce\mexp{\mexp'}}
