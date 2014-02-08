@@ -1,4 +1,46 @@
-\section{Variables, Conditionals, Booleans, \& Errors}
+\newcommand\err{\mathbf{err}}
+\newcommand\prop{\mathbf{prop}}
+
+\newcommand\compat[1]{\rightarrow_{#1}}
+\newcommand\multicompat[1]{\rightarrow^\star_{#1}}
+\newcommand\std[1]{\longmapsto_{#1}}
+\newcommand\multistd[1]{\longmapsto^\star_{#1}}
+
+\newcommand\berr{\mathbf{be}}
+
+\newcommand\envreduce[4][\menv]{#1 \vdash {#2\;#3\;#4}}
+
+\newcommand\unaryerror[2]{
+\inferrule{\beval\menv{\mexp}\mval \\ \mval \not\in {#2}}
+          {\beval\menv{{#1}(\mexp)}{\Err_{#1}}}
+}
+
+\newcommand\binaryerror[2]{
+\inferrule{\beval\menv{\mexp_1}\mval \\ \mval \not\in {#2}}
+          {\beval\menv{{#1}(\mexp_1,\mexp_2)}{\Err_{{#1}1}}}
+
+\inferrule{\beval\menv{\mexp_2}\mval \\ \mval \not\in {#2}}
+          {\beval\menv{{#1}(\mexp_1,\mexp_2)}{\Err_{{#1}2}}}
+}
+
+\newcommand\binaryreduceerror[3]{
+\inferrule{\mval \not\in {#3} }
+          {\envreduce{{#2}(\mexp,\mval)}{#1}{\Err_{{#2}1}}}
+
+\inferrule{\mval \not\in {#3} }
+          {\envreduce{{#2}(\mval,\mexp)}{#1}{\Err_{{#2}2}}}
+}
+
+\newcommand\binaryreducevalerror[3]{
+\inferrule{\mval_1 \not\in {#3} }
+          {\envreduce{{#2}(\mval_1,\mval_2)}{#1}{\Err_{{#2}1}}}
+
+\inferrule{\mval_2 \not\in {#3} }
+          {\envreduce{{#2}(\mval_1,\mval_2)}{#1}{\Err_{{#2}2}}}
+}
+
+
+\section{Variables, Conditionals, \& Errors}
 
 The $\Arith$ language is about as simple a programming language as
 you're likely to find, although it served us well in demonstrating many
@@ -74,36 +116,44 @@ since $\False$ is different than $7$.  Or maybe true because the
 pointer representation of $7$ and $\False$ turn out to be the same.
 Or maybe you return $42$, because why not?  Or you might do something
 sensible and raise an error because a numerical operator was applied
-to the wrong kind of argument.  Likewise for $\Div(7,0)$ and
-$\If(4,1,2)$; the right thing is to signal an error.  But what does
-that mean for the semantic model?
+to the wrong kind of argument?
 
-\subsection{Natural Semantics for Imprecise Errors}
+In this section, we are going to take the simplest path forward.  We
+will only consider well-behaved programs.  In the case of the natural
+semantics, this means programs such as $\If(4,1,2)$ are literally
+\emph{meaningless}: the semantic relation will be undefined on such
+programs.  In the case of the reduction semantics, such programs ``get
+stuck'': they reach a bad state that cannot proceed further; errors
+manifest as irreducible programs that are not values.
+
+\subsection{Natural Semantics}
 
 Let's identify a set of \emph{values} and a set of \emph{answers}.
-Values include integers and Booleans.  Answers include values and
-errors:
+Values include integers and Booleans.  Answers, which represent the
+final results of evaluation are for the moment just values:
 \[
 \begin{array}{llcl}
 \mathit{Val} & \mval & = & \mbool\ |\ \mint\\
-\mathit{Ans} & \mans & = & \mval\ |\ \merr\\
-\mathit{Err} & \merr & = & \Err_\ell \text{ where $\ell$ is in some set}
+\mathit{Ans} & \mans & = & \mval\\
 \end{array}
 \]
-We'll assume there are an infinite number of different errors and
-write subscripts to distinguish them ($\ell$ ranges over these subscripts).
 
 
-Since evaluation now depends on an environment, the natural semantics
-is modelled as a ternary relation $(\cdot \vdash \cdot \Downarrow
-\cdot) \subseteq (\mathit{Var} \rightharpoonup \mathit{Val})\times
-\Barith \times \mathit{Ans}$.  The relation includes an
-\deftech{environment} which maps variables to values.  Environments,
-ranged over by meta-variable $\menv$, are partial functions from
-variables to environments and $\dom(\menv) = \{ \mvar\ |\ \menv(\mvar)
-= \mval \text{ for some }\mval \}$.  Values are self
-evaluating. Variables evaluate to the value given by the environment,
-or an error if undefined:
+The evaluation of programs containing variables depends on an
+environment which gives meaning to these variables.  In the natural
+semantics is modelled as a ternary relation $(\cdot \vdash \cdot
+\Downarrow \cdot) \subseteq (\mathit{Var} \rightharpoonup
+\mathit{Val})\times \Barith \times \mathit{Ans}$.  The relation
+includes an \deftech{environment} which maps variables to values.
+Environments, ranged over by meta-variable $\menv$, are partial
+functions from variables to environments.  Values are self
+evaluating. Variables evaluate to the value given by the environment.
+Division performs the integer division of its arguments when they
+evaluate to numeric values and the denominator is non-zero. Equality
+is defined as you might expect, producing true when its arguments
+evaluate the same number, false when they evaluate to different
+numbers.  Conditionals select which value to produce based on the
+evaluation of the test expression.
 \begin{mathpar}
 \inferrule{\ }
           {\beval\menv\mval\mval}
@@ -111,66 +161,170 @@ or an error if undefined:
 \inferrule{\menv(\mvar) = \mval}
           {\beval\menv\mvar\mval}
 
-\inferrule{\mvar \notin \dom(\menv)}
-          {\beval\menv\mvar{\Err_{\mvar}}}
-\end{mathpar}
-Equality is defined as you might expect, producing true when its
-arguments evaluate the same number, false when they evaluate to
-different numbers, and an error when they evaluate to non-numbers:
-\begin{mathpar}
-\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint = \moint}
-          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\True}
-
-\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint \neq \moint}
-          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\False}
-
-\inferrule{\beval\menv{\mexp_1}\mbool}
-          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq1}}}
-
-\inferrule{\beval\menv{\mexp_2}\mbool}
-          {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq2}}}
-\end{mathpar}
-Division performs the integer division of its arguments when they
-evaluate to numeric values and the denominator is non-zero; it
-produces an error when the denominator is zero or either argument
-evaluates to a non-numeric value:
-\begin{mathpar}
 \inferrule{\beval\menv{\mexp_1}\mint
   \\ \beval\menv{\mexp_2}\moint
   \\ \moint \neq 0
   \\ k = \lfloor \mint / \moint \rfloor}
           {\beval\menv{\Div(\mexp_1,\mexp_2)}{k}}
 
+\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint = \moint}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\True}
+
+\inferrule{\beval\menv{\mexp_1}\mint \\ \beval\menv{\mexp_2}\moint \\ \mint \neq \moint}
+          {\beval\menv{\Eq(\mexp_1,\mexp_2)}\False}
+
+\inferrule{\beval\menv{\mexp_1}\True \\
+  \beval\menv{\mexp_2}\mans}
+          {\beval\menv{\If(\mexp_1,\mexp_2,\mexp_3)}\mans}
+
+\inferrule{\beval\menv{\mexp_1}\False \\
+  \beval\menv{\mexp_3}\mans}
+          {\beval\menv{\If(\mexp_1,\mexp_2,\mexp_3)}\mans}
+\end{mathpar}
+We can also assume the omitted rules for handling expressions from
+$\Arith$, which are just like before but carrying an environment.
+
+The important to note here is what is missing.  There's no definition
+for what happens, for example, when $\mvar$ is not defined in $\menv$,
+nor when $\moint=0$ in the rule for $\Div$.  Likewise, a program that
+compares non-numeric values for equality will not have an answer
+according to $\Downarrow$.
+
+This semantics still has the nice property of giving the same answer
+whenever it gives an answer, but unlike the natural semantics for
+$\Arith$, it does not give an answer for all programs.  It is
+therefore a partial function.
+
+\subsection{Reduction Semantics}
+
+Modelling $\Barith$ with reduction semantics is pretty easy.  The
+reduction axioms are just the following (and we assume $\reduce$-like
+axioms, too):
+\begin{mathpar}
+  \inferrule{\menv(\mvar) = \mval}
+            {\breduce\menv\mvar\mval}
+
+  \inferrule{\mint=\moint}
+            {\breduce\menv{\Eq(\mint,\moint)}\True}
+
+  \inferrule{\ }
+            {\breduce\menv{\If(\True,\mexp_1,\mexp_2)}{\mexp_1}}
+
+  \inferrule{\ }
+            {\breduce\menv{\If(\False,\mexp_1,\mexp_2)}{\mexp_2}}
+
+  \inferrule{\mint\neq \moint}
+            {\breduce\menv{\Eq(\mint,\moint)}\False}
+
+  \inferrule{j\neq 0 \\ k = \lfloor \mint/\moint \rfloor}
+            {\breduce\menv{\Div(\mint,\moint)}{k}}
+\end{mathpar}
+
+Notice that like the natural semantics, the meaning of a program is
+given in terms of an environment.
+
+The $\bstepname$ relation is the closure of $\breducename$ for
+compatibility with the syntax of expressions; The $\bmultistepname$
+relation is the relfexive, transitive closure of the $\bstepname$
+relation.  The $=_\breducename$ equivalence relation is the symmetric
+closure of the $\bmultistepname$ relation.  The syntactic theory is
+consistent and standard reduction relation $\bstdstepname$ can be
+defined as the contextual closure of $\breducename$ over the following
+grammar of evaluation contexts (plus the grammar of $\mectx$ for
+$\Arith$):
+\[
+\begin{array}{llcl}
+\mathit{EvalContext} & \mectx & = & \dots \\
+                 &       & | & \Eq(\mectx,\mexp)\ |\ \Eq(\mval,\mectx)\\
+                 &       & | & \Div(\mectx,\mexp)\ |\ \Div(\mval,\mectx)\\
+                 &       & | & \If(\mectx,\mexp,\mexp)
+\end{array}
+\]
+The usual standardization property holds for $\Barith$.
+
+Unlike the natural semantics, we can give a partial meaning to
+programs that reach bad states because they reduce until the reduction
+axiom cannot be applied, for example:
+\begin{mathpar}
+\bclosedstep{\Plus(3,\Mult(2,\Div(5,\Pred(1))))}
+            {\Plus(3,\Mult(2,\Div(5,0)))}
+\end{mathpar}
+The expression on the right cannot take any further steps.  Since it
+is not a value and cannot step further, we say it is \deftech{stuck}.
+
+
+
+%%%%% 
+\subsection{Meaningful Errors}
+
+The development of the previous section, which essentially ignores
+errors in the semantic models of $\Barith$, can be a useful and simple
+way of conceiving of a programming language.  It can also lead to
+issues, which depending on the setting, can be problematic.  Undefined
+behavior in languages such as C are the source of major security
+vulnerabilities, for example.  Sometimes it is worth modelling errors
+explicitly.  For example, we may want to know what kinds of errors are
+possible, and if errors are possible, which code component is at fault
+for the error.  In the remainder of this section, we look at various
+ways of modelling errors for our simple language.  Although this is a
+simpified setting, we will see that errors, which are a primitive form
+of \deftech{effect}, complicate reasoning about programs.  In
+particular, we must be careful in designing the syntactic theory in
+order to remaing consistent.
+
+
+For a proper account of error behvior, we need to designate a set of
+errors and include them in the set of answers that a program may compute:
+\[
+\begin{array}{llcl}
+\mathit{Ans} & \mans & = & \dots\ |\ \merr\\
+\mathit{Err} & \merr & = & \Err_\ell \text{ where $\ell$ is in some set}
+\end{array}
+\]
+We'll assume there are an infinite number of different errors and
+write subscripts to distinguish them ($\ell$ ranges over these subscripts).
+
+
+
+\subsection{Natural Semantics for Imprecise Errors}
+
+Errors can arise when a variable is unbound (it is not defined in the
+environment), when division is performed with a denominator of 0, or
+when the wrong kind of value is used for an operation, such as adding
+a Boolean and an integer or using $\If$ with a non-Boolean test.
+%
+A variable is unbound when it is not in the domain of the environment;
+formally: $\dom(\menv) = \{ \mvar\ |\ \menv(\mvar) = \mval \text{ for
+  some }\mval \}$.
+%
+The following rules define when an error is created:
+\begin{mathpar}
+\inferrule{\mvar \notin \dom(\menv)}
+          {\beval\menv\mvar{\Err_{\mvar}}}
+
+\binaryerror\Eq\Int
+
 \inferrule{\beval\menv{\mexp_1}\mint
   \\ \beval\menv{\mexp_2}\moint
   \\ \moint = 0}
           {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div0}}}
 
-\inferrule{\beval\menv{\mexp_1}\mbool}
-          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div1}}}
+\binaryerror\Div\Int
 
-\inferrule{\beval\menv{\mexp_2}\mbool}
-          {\beval\menv{\Div(\mexp_1,\mexp_2)}{\Err_{\Div2}}}
+\inferrule{\beval\menv{\mexp_1}\mval \\ \mval \not\in \Bool}
+          {\beval\menv{\If(\mexp_1,\mexp_2,\mexp_3)}{\Err_{\If}}}
 \end{mathpar}
-Conditionals select which value to produce based on the evaluation of
-the test expression, and produce an error if the test produces a
-non-Boolean value:
+For completeness, we should also give the rules for expressions from
+$\Arith$:
 \begin{mathpar}
-\inferrule{\beval\menv{e_1}\True \\
-  \beval\menv{e_2}\mans}
-          {\beval\menv{\If(e_1,e_2,e_3)}\mans}
+\unaryerror\Pred\Int
 
-\inferrule{\beval\menv{e_1}\False \\
-  \beval\menv{e_3}\mans}
-          {\beval\menv{\If(e_1,e_2,e_3)}\mans}
+\unaryerror\Succ\Int
 
-\inferrule{\beval\menv{e_1}\mint}
-          {\beval\menv{\If(e_1,e_2,e_3)}{\Err_{\If}}}
+\binaryerror\Plus\Int
+
+\binaryerror\Mult\Int
 \end{mathpar}
-The remaining rules for $\Succ$, $\Pred$, $\Plus$, and $\Mult$ are
-straightforward following the same pattern as above: when their
-arguments evaluate to numbers, they do the obvious thing; when given non-numeric
-arguments, they produce errors.
 
 While the above rules take care of creating errors when they arise, no
 rules have dealt with the propagation of errors.  For example, we
@@ -230,7 +384,7 @@ language and restoring the functional nature of evaluation.
 
 The thing leading to the observed non-determinism of the evaluator is
 the overlap in hypothesis in the different inference rules.  Consider the error
-propogation rules for $\Eq$.  It's possible that
+propagation rules for $\Eq$.  It's possible that
 $\beval\menv{\mexp_1}\mbool$ \emph{and}
 $\beval\menv{\mexp_2}{\mbool'}$, thus either rule could apply leading
 to distinct answers.  By grade school analogy, it's as if the answer
@@ -274,7 +428,7 @@ previous problem?
 \end{exercise}
 
 
-\subsection{A Consistent Syntactic Theory}
+\subsection{Consistent Syntactic Theory}
 
 Now that we've seen the complications errors introduce in the setting
 of natural semantics, let's look at the same development using
@@ -287,114 +441,95 @@ programs to model reduction:
 \mathit{Exp} & \mexp & = & \dots\ |\ \merr
 \end{array}
 \]
-With this in place, many of the axioms are straightforward:
-\begin{mathpar}
-  \inferrule{\menv(\mvar) = \mval}
-            {\breduce\menv\mvar\mval}
 
+
+Next, let's define two reduction axioms.  The first, which we'll call
+$\err$, creates errors.  The second, $\prop$, propagates them.
+Some of rules for $\err$ are obvious:
+\begin{mathpar}
   \inferrule{\mvar \notin \dom(\menv)}
-            {\breduce\menv\mvar{\Err_\mvar}}
-
-  \inferrule{i=j}
-            {\breduce\menv{\Eq(i,j)}\True}
-
-  \inferrule{i\neq j}
-            {\breduce\menv{\Eq(i,j)}\False}
-
-  \inferrule{j\neq 0 \\ k = \lfloor i/j \rfloor}
-            {\breduce\menv{\Div(i,j)}{k}}
+            {\envreduce\mvar\err{\Err_\mvar}}
 
   \inferrule{\ }
-            {\breduce\menv{\Div(i,0)}{\Err_{\Div0}}}
+            {\envreduce{\Div(\mint,0)}\err{\Err_{\Div0}}}
 
-  \inferrule{\ }
-            {\breduce\menv{\If(\True,\mexp_1,\mexp_2)}{\mexp_1}}
+  \inferrule{\mval \not\in \Bool}
+            {\envreduce{\If(\mval,\mexp_1,\mexp_2)}\err{\Err_\If}}
 
-  \inferrule{\ }
-            {\breduce\menv{\If(\False,\mexp_1,\mexp_2)}{\mexp_2}}
+  \inferrule{\mval \not\in \Int}
+            {\envreduce{\Pred(\mval)}\err{\Err_\Plus}}
+
+  \inferrule{\mval \not\in \Int}
+            {\envreduce{\Succ(\mval)}\err{\Err_\Succ}}
 
 \end{mathpar}
-We also need rules for creating type errors.  Some are straightforward,
-such as branching on an integer instead of a Boolean:
+
+But we would be wrong to add the following axioms:
 \begin{mathpar}
-  \inferrule{\ }
-            {\breduce\menv{\If(i,\mexp_1,\mexp_2)}{\Err_\If}}
-\end{mathpar}
-But we would be wrong to add the following axioms for $\Eq$ and
-$\Div$:
-\begin{mathpar}
-  \inferrule{\ }
-            {\breduce\menv{\Eq(\mbool,\mexp)}{\Err_{\Eq1}}}
+  \binaryreduceerror\err\Plus\Int
 
-  \inferrule{\ }
-            {\breduce\menv{\Eq(\mexp,\mbool)}{\Err_{\Eq2}}}           
+  \binaryreduceerror\err\Mult\Int
 
-  \inferrule{\ }
-            {\breduce\menv{\Div(\mbool,\mexp)}{\Err_{\Div1}}}
+  \binaryreduceerror\err\Eq\Int
 
-  \inferrule{\ }
-            {\breduce\menv{\Div(\mexp,\mbool)}{\Err_{\Div2}}}           
+  \binaryreduceerror\err\Div\Int
 \end{mathpar}
 The problem with these rules is they would immediately make the
 syntactic theory inconsistent and identify all errors as equal.  For
-example, we can have $\breduce\relax{\Eq(\Err_1,\Err_2)}{\Err_1}$ and
-$\breduce\relax{\Eq(\Err_1,\Err_2)}{\Err_2}$, which induces the
-equivalence $\vdash\Err_1 =_\breducename \Err_2$.  We also have to be
+example, we can have $\envreduce[\relax]{\Eq(\Err_1,\Err_2)}\err{\Err_1}$ and
+$\envreduce[\relax]{\Eq(\Err_1,\Err_2)}\err{\Err_2}$, which induces the
+equivalence $\vdash\Err_1 =_\err \Err_2$.  We also have to be
 careful with how errors are propagated.  At first glance, you might
 think to propagate errors past each of the syntactic constructors.  So
 for example, you might have the following propagation rules for $\Eq$,
 and similar rules for all the other constructors:
 \begin{mathpar}
 \inferrule{\ }
-          {\breduce\menv{\Eq(\merr,\mexp)}{\merr}}
+          {\envreduce{\Eq(\merr,\mexp)}\prop{\merr}}
 
 \inferrule{\ }
-          {\breduce\menv{\Eq(\mexp,\merr)}{\merr}}
+          {\envreduce{\Eq(\mexp,\merr)}\prop{\merr}}
 \end{mathpar}
 But this also causes inconsistency.  Moreover, any two programs which
 contain or may reduce to errors would be equated in the theory.
 That's not a useful equational theory.
 
-Instead, we want to limit the $\breducename$ relation in the following
+Instead, we want to limit the $\err$ relation in the following
 way.  In order for a type error to be created, the subexpressions must
 be values:
 \begin{mathpar}
-  \inferrule{\ }
-            {\breduce\menv{\Eq(\mbool,\mval)}{\Err_{\Eq1}}}
+  \binaryreduceerror\err\Plus\Int
 
-  \inferrule{\ }
-            {\breduce\menv{\Eq(\mbool,\mval)}{\Err_{\Eq2}}}           
+  \binaryreduceerror\err\Mult\Int
 
-  \inferrule{\ }
-            {\breduce\menv{\Div(\mbool,\mval)}{\Err_{\Div1}}}
+  \binaryreduceerror\err\Eq\Int
 
-  \inferrule{\ }
-            {\breduce\menv{\Div(\mval,\mbool)}{\Err_{\Div2}}}
+  \binaryreduceerror\err\Div\Int
 \end{mathpar}
 Likewise, when propagating errors, we only allow propagation
 when subexpressions to the left of the error are values:
 \begin{mathpar}
 \inferrule{\ }
-          {\breduce\menv{\Eq(\merr,\mexp)}{\merr}}
+          {\envreduce{\Eq(\merr,\mexp)}\prop{\merr}}
 
 \inferrule{\ }
-          {\breduce\menv{\Eq(\mval,\merr)}{\merr}}
+          {\envreduce{\Eq(\mval,\merr)}\prop{\merr}}
 \end{mathpar}
 The remaining rules for $\Pred$, $\Succ$, $\Div$, $\Plus$, and $\Mult$
 are similar.  One notable exception is $\If$.  We only allow errors to
 propagate past an $\If$ if the error occurs in the test position:
 \begin{mathpar}
 \inferrule{\ }
-          {\breduce\menv{\If(\merr,\mexp_1,\mexp_2)}{\merr}}
+          {\envreduce{\If(\merr,\mexp_1,\mexp_2)}\prop{\merr}}
 \end{mathpar}
 
-
-
-
-We can now define $\bstepname$ as the compatible closure of
-$\breducename$ over the grammar of $\Barith$ expressions,
-$\bmultistepname$ as the reflexive transitive closure of $\bstepname$,
-and $=_\breducename$ as the symmetric closure of $\bmultistepname$.
+We can now define a small-step reduction relation.  Let's call it
+$\compat\berr$ to distinguish it from $\bstepname$.  We define
+$\compat\berr$ as the compatible closure of $(\breducename\; \cup\; \err\;
+\cup\; \prop)$ over the grammar of $\Barith$ expressions;
+$\multicompat\berr$ is the reflexive transitive closure of
+$\compat\berr$, and $=_\berr$ as the symmetric closure of
+$\multicompat\berr$.
 
 Note that this theory allows us to reduce inside of $\If$ expressions,
 but if an error occurs, we cannot propogate it out until the test
@@ -402,40 +537,28 @@ expression produces a value and the $\If$ is reduced to the consequent
 or alternative based on it.
 
 \begin{exercise}[Consistency]
-Prove if $\menv \vdash \mexp =_\breducename \mans \mbox{ and } \menv
-\vdash \mexp =_\breducename \mans'$, then $\mans = \mans'$.
+Prove if $\menv \vdash \mexp =_\berr \mans \mbox{ and } \menv
+\vdash \mexp =_\berr \mans'$, then $\mans = \mans'$.
+\end{exercise}
+
+\begin{exercise}
+Prove $\envreduce\mexp{\multicompat\berr}\mval \iff \envreduce\mexp{\multicompat\breducename}\mval$.
 \end{exercise}
 
 
-
-\subsection{Standard Reduction}
-
 The approach of using evaluation contexts to specify canonical
-reductions scales up to more complicated languages such as $\Barith$.
-To define a standard reduction semantics for $\Barith$, the notion of
-evaluation contexts includes everything from $\Arith$, plus:
-\[
-\begin{array}{llcl}
-\mathit{EvalContext} & \mectx & = & \dots \\
-                 &       & | & \Eq(\mectx,\mexp)\ |\ \Eq(\mval,\mectx)\\
-                 &       & | & \Div(\mectx,\mexp)\ |\ \Div(\mval,\mectx)\\
-                 &       & | & \If(\mectx,\mexp,\mexp)
-\end{array}
-\]
-%% Note that only the test position of an $\If$ expression is an
-%% evaluation context. This forces $\If$ to first evaluate the test
-%% before evaluating the consequent or alternative, which prevents, for
-%% example, $\If(\False,\Err_{\Div0},4)$ from producing an error.
-
-The standard reduction relation is defined as:
+reductions scales up to more complicated languages such as $\Barith$
+with errors.  In fact, the notion of evaluation contexts does not
+change from what has already been defined for $\Barith$, so the
+standard reduction relation can be defined defined as:
 \begin{mathpar}
-\inferrule{\breduce\menv\mexp{\mexp'}}
-          {\bstdstep\menv{\plug\mectx\mexp}{\plug\mectx{\mexp'}}}
+\inferrule{\envreduce\mexp{(\breducename\; \cup\; \err\; \cup\; \prop)}{\mexp'}}
+          {\envreduce{\plug\mectx\mexp}{\std\berr}{\plug\mectx{\mexp'}}}
 \end{mathpar}
 
 
 \begin{exercise}[Standardization]\label{ex:standardization}
-Prove $\bstdmultistep\menv\mexp\mans \iff \bmultistep\menv\mexp\mans$.
+Prove $\envreduce\mexp{\multistd\berr}\mans \iff \envreduce\mexp{\multicompat\berr}\mans$.
 \end{exercise}
 
 \begin{exercise}
@@ -447,7 +570,7 @@ reduction relation until an answer is produced.
 
 \subsection{Discarding the Context}
 
-When introducing contexts in section~\ref{sec:context} that
+When introducing contexts in section~\ref{sec:context}, we noted that
 formulating reductions explicitly in terms of contexts gives us
 expressive power to write new kinds of reductions that are difficult
 to do without a context.
@@ -458,34 +581,36 @@ $\Plus(3,\Mult(2,\Div(5,0)))$, which introduces an error on the next
 step and then step by step propagates the error outward until it is
 the final answer:
 \begin{mathpar}
-\bclosedstep{\bclosedstep{\bclosedstep{\Plus(3,\Mult(2,\Div(5,0)))}{\Plus(3,\Mult(2,\Err_{\Div0}))}}
-  {\Plus(3,\Err_{\Div0})}}
-            {\Err_{\Div0}}
+\Plus(3,\Mult(2,\Div(5,0))) \;\compat\berr\;
+\Plus(3,\Mult(2,\Err_{\Div0})) \;\compat\berr\;
+\Plus(3,\Err_{\Div0}) \;\compat\berr\;
+\Err_{\Div0}
 \end{mathpar}
 Achieving this step-by-step bubbling up of errors tedious because it
 required a bunch of reduction axioms of the form
-$\Mult(\mval,\Err_\ell)\;\breducename\;\Err_\ell$.
+$\Mult(\mval,\Err_\ell)\;\prop\;\Err_\ell$.
 %
 We can avoid the propagating reductions and intermediate steps in the
-standardized semantics.  Let $\breducename'$ be $\breducename$ without
-any error propagation rules.  Then standard reduction can be defined
-by the following two inference rules:
-\begin{mathpar}
-\inferrule{\menv\vdash\mexp\;\breducename'\;{\mexp'}}
-          {\bstdstep\menv{\plug\mectx\mexp}{\plug\mectx{\mexp'}}}
+standardized semantics.
 
-\inferrule{\ }
-          {\bstdstep\menv{\plug\mectx{\Err_\ell}}{\Err_\ell}}
+Consider the following alternative standard reduction relation:
+\begin{mathpar}
+\inferrule{\envreduce\mexp{(\breducename\; \cup\; \err)}{\mexp'}}
+          {\envreduce{\plug\mectx\mexp}{\std{\berr'}}{\plug\mectx{\mexp'}}}
+
+\inferrule{\mectx \neq \hole }
+          {\envreduce{\plug\mectx{\Err_\ell}}{\std{\berr'}}{\Err_\ell}}
 \end{mathpar}
 The example now immediately jumps to the final error state:
 \begin{mathpar}
-\bstdstep\menv{\Plus(3,\Mult(2,\Err_{\Div0}))}
-              {\Err_{\Div0}}
+\envreduce{\Plus(3,\Mult(2,\Err_{\Div0}))}
+          {\std{\berr'}}
+          {\Err_{\Div0}}\text.
 \end{mathpar}
 
 
 \begin{exercise}
-Reprove the standardization theorem (exercise~\ref{ex:standardization})
-for this alternative standard reduction relation.
+Prove $\envreduce\mexp{\multistd{\berr'}}\mans \iff
+\envreduce\mexp{\multistd{\berr}}\mans$.
 \end{exercise}
 

@@ -11,6 +11,7 @@
 \usepackage{amssymb}
 \usepackage{mathpartir}
 \usepackage{exercise}
+\usepackage{ulem}
 \usepackage[nohead,nofoot,vmargin=1.25in,hmargin=1.25in]{geometry}
 
 \setmainfont[Mapping=tex-text]{Bitstream Iowan Old Style BT}
@@ -26,6 +27,8 @@
 \newcommand\mint{i}
 \newcommand\moint{j}
 \newcommand\mbool{b}
+\newcommand\Bool{\mathit{Bool}}
+\newcommand\Int{\mathit{Int}}
 
 \newcommand\plug[2]{#1[#2]}
 
@@ -72,6 +75,7 @@
 \newcommand\bmultistepname{\rightarrow^\star_{\breducename}}
 
 \newcommand\bmultistep[3]{#1\vdash #2\;\bmultistepname\;#3}
+\newcommand\bstdstepname{\longmapsto_{\breducename}}
 \newcommand\bstdstep[3]{#1\vdash #2\;{\longmapsto_{\breducename}}\;#3}
 \newcommand\bstdmultistep[3]{#1\vdash #2\;{\longmapsto^\star_{\breducename}}\;#3}
 
