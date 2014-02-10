@@ -405,13 +405,6 @@ generation and propogation:
 \inferrule{\beval\menv{\mexp_1}\mint \\
            \beval\menv{\mexp_2}\mbool }
           {\beval\menv{\Eq(\mexp_1,\mexp_2)}{\Err_{\Eq2}}}
-
-\inferrule{\beval\menv{\mexp_1}\merr}
-          {\beval\menv{\If(\mexp_1,\mexp_2)}\merr}
-
-\inferrule{\beval\menv{\mexp_1}\mval \\
-           \beval\menv{\mexp_2}\merr}
-          {\beval\menv{\If(\mexp_1,\mexp_2)}\merr}
 \end{mathpar}
 
 \begin{exercise}
@@ -500,13 +493,13 @@ Instead, we want to limit the $\err$ relation in the following
 way.  In order for a type error to be created, the subexpressions must
 be values:
 \begin{mathpar}
-  \binaryreduceerror\err\Plus\Int
+  \binaryreducevalerror\err\Plus\Int
 
-  \binaryreduceerror\err\Mult\Int
+  \binaryreducevalerror\err\Mult\Int
 
-  \binaryreduceerror\err\Eq\Int
+  \binaryreducevalerror\err\Eq\Int
 
-  \binaryreduceerror\err\Div\Int
+  \binaryreducevalerror\err\Div\Int
 \end{mathpar}
 Likewise, when propagating errors, we only allow propagation
 when subexpressions to the left of the error are values:
