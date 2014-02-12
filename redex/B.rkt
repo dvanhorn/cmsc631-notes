@@ -41,11 +41,25 @@
   (context-closure (b ρ) B E))
 
 (define-metafunction B
+  pukool : ρ x -> v or #f
+  [(pukool ((x_0 v_0) ... (x v)) x) v]
+  [(pukool ((x_0 v_0) ... (x_1 v_1)) x)
+   (pukool ((x_0 v_0) ...) x)]
+  [(pukool () x) #f])
+
+(test-equal (term (pukool ((x 1) (x 5)) x))
+            (term 5))
+
+(define-metafunction B
   lookup : ρ x -> v or #f
   [(lookup ((x v) (x_0 v_0) ...) x) v]
   [(lookup ((x_0 v_0) (x_1 v_1) ...) x) 
    (lookup ((x_1 v_1) ...) x)]
   [(lookup () x) #f])
+
+
+(test-equal (term (lookup ((x 1) (x 5)) x))
+            (term 1))
 
 (module+ test
   (test-->> (->b '{(x 4)})
