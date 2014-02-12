@@ -464,6 +464,12 @@ We can now extend the syntax of {\tt A} to obtain {\tt B}:
      (Eq v E)
      (If E e e)))
 \end{verbatim}
+The ``{\tt e ::= ....}'' (that's \emph{four} dots) grammar means
+everything that's an {\tt e} from {\tt A} plus the new productions
+that follow.  It is really as if you had copied the grammar of {\tt e}
+from {\tt A} in place of the ellipsis; all of the occurrences of the
+non-terminal {\tt e}s in the grammar of {\tt A} range over {\tt e}s
+drawn from {\tt B}.
 
 The reduction relation {\tt a} can be lifted to work on {\tt B}
 expressions and unioned with the new reduction axioms:
@@ -493,8 +499,79 @@ variable if it exists, or produced {\tt \#f}:
    (lookup ((x_1 v_1) ...) x)]
   [(lookup () x) #f])
 \end{verbatim}
+The first line of this metafunction specifies a signature which states
+it consumes an environment and variable and produces a value or {\tt
+  \#f}.  It will result in an error if any of these conditions are
+violated.  Although Redex doesn't have a type system, it's still
+useful to catch these kinds of errors.
 
-We can further develop the semantics for errors as a further extension:
+After the signature, there are three clauses, each consisting of a
+pattern and a template.  The patterns are matched in order.  The first
+clause matches when the first element in the environment contains the
+variable {\tt x}, which is the same variable {\tt x} being looked up;
+notice that the name {\tt x} is used twice in this pattern.  In this
+case, {\tt lookup} produces the associated value from the environment.
+The second clause matches when the environment is non-empty
+and---knowing the first clause wasn't taken---the first element is not
+what's being looked up.  In this case, {\tt lookup} looks up the
+variable in the rest of the environment.  The third and final clause
+matches when the environment is empty, meaning {\tt x} is not in the
+environment.
+
+A pattern of the form ``{\tt p ...}'' (that's \emph{three} dots!),
+where {\tt p} is some pattern, means ``match {\tt p} zero or more
+times.''  (You can think of it as Kleene star or ``$*$'' from regular
+expressions.)  So the pattern {\tt (i ...)} matches {\tt ()}, {\tt
+  (1)}, {\tt (1 2 3)}, etc.  So in the first clause of {\tt lookup}:
+\begin{verbatim}
+  [(lookup ((x v) (x_0 v_0) ...) x) v]
+\end{verbatim}
+This pattern matches an environment which starts with {\tt (x v)} and
+then has zero or more {\tt (x\_0 v\_0)}s.  An easy mistake to make is to
+write ``{\tt ...}'' as if it were a ``match anything'' pattern
+signifying you don't care about the remaining data in the environment.
+Thinking this way, you might instead write the clause as:
+\begin{verbatim}
+  [(lookup ((x v) ...) x) v]
+\end{verbatim}
+But this does not mean what you think it means.  The problem here is
+we're matching many {\tt x}s since {\tt x} is part of the pattern
+repeated by ``{\tt ...}'', and therefore we bind many {\tt v}s, but
+the template only has one occurrence.  This kind of mismatch in number
+will result in a syntax error complaining about a binder at different
+depths.
+
+Now let's look at the second clause:
+\begin{verbatim}
+  [(lookup ((x_0 v_0) (x_1 v_1) ...) x) 
+   (lookup ((x_1 v_1) ...) x)]
+\end{verbatim}
+This pattern matches whenever the environment contains one or more
+elements.  This is achieved by writing a pattern {\tt (x\_0 v\_0)} for
+the one element and then {\tt (x\_1 v\_1) ...} for the remaining zero
+or more elements.  This is a fairly common idiom for matching the
+first and rest of a list.  The result calls {\tt lookup} with a
+structurally smaller environment.
+
+
+Programming with Redex's souped-up pattern matcher takes some getting
+used to.  Try things out.  Make conjectures with test cases.
+
+\begin{exercise} 
+Design a metafunction {\tt pukool} which is like {\tt lookup} but
+searches through the environment from right to left.  The following
+test cases demonstrate the difference:
+\begin{verbatim}
+(test-equal (term (lookup ((x 1) (x 5)) x))
+            (term 1))
+(test-equal (term (pukool ((x 1) (x 5)) x))
+            (term 5))
+\end{verbatim}
+\end{exercise}
+
+
+We can further develop the semantics for errors as a further
+extension:
 \begin{verbatim}
 (define-extended-language BE B
   (e ::= .... r)
