@@ -9,10 +9,12 @@
 \usepackage{xunicode}
 \usepackage{hyperref}
 \usepackage{amssymb}
+\usepackage{amsthm}
 \usepackage{mathpartir}
 \usepackage{exercise}
 %\usepackage{fontspec}
 \usepackage{newunicodechar}
+\newtheorem{claim}{Claim}[section]
 \newunicodechar{ρ}{\ensuremath{\rho}}
 \usepackage[nohead,nofoot,vmargin=1.25in,hmargin=1.25in]{geometry}
 
@@ -122,7 +124,7 @@
 \input{arith.tex}
 \input{barith.tex}
 \input{redex.tex}
-% \input{types.tex}
+\input{types.tex}
 
 \appendix
 \section{Acknowledgments}

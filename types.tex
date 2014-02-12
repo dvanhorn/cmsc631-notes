@@ -1,0 +1,469 @@
+\newcommand\typevaljudge[3]{{#1}\vdash{#2}:{#3}}
+\newcommand\mtype{t}
+\newcommand\typeof{\mathit{typeof}}
+\newcommand\treduce{\mathbf{t}}
+\newcommand\mtans{ta}
+\newcommand\Ans{\mathit{Ans}}
+\newcommand\TyAns{\mathit{TyAns}}
+
+\section{Proving the Absence of (Certain Kinds of) Errors}
+
+It would be nice to eliminate all programs that have errors in them.
+In general, it's not possible to mechanically determine if a program
+will cause an error when run, so much of program analysis, which is
+the study of approximations to program properties, is concerned with
+detecting or proving the absense of errors in programs.  One of the
+most common forms of this kind of program analysis are \deftech{type
+  systems}:
+
+\begin{quotation}
+A type system is a tractable syntactic method for proving the absence
+of certain program behaviors by classifying phrases according to the
+kinds of values they compute.
+
+\raggedleft --- Benjamin C.~Pierce
+\end{quotation}
+
+In its simplest form, a type system can prove the absence of errors
+that arise from applying operations to the wrong kinds of values.  Like
+any program analysis, the classification of programs into those that
+have these kind of errors and those that do not must be approximate.
+So the classification will err on the side of caution and classify
+programs as \emph{definitely} not having this kinds of errors or
+\emph{potentially} having them.  In other words, a type system will
+misclassify some good programs as bad, but no bad program will be
+classified as good.
+
+
+\subsection{Type Judgments}
+
+In the language of $\Barith$ expressions, there are two kinds of data:
+Booleans and integers.  We can formalize a judgment on programs that
+classifies them according to the data they produce, eliminating the
+possibility of errors arising from misusing data.
+
+A type is either $\Bool$ or $\Int$:
+\[
+\begin{array}{llcl}
+\mathit{Type} & \mtype & = & \Bool\ |\ \Int
+\end{array}
+\]
+
+A \deftech{type judgment} is a ternary relation on environments,
+expressions, and types:
+\[
+\typevaljudge\menv\mexp\mtype
+\]
+If a program $(\menv,\mexp)$ is related to $\mtype$ it means the
+program evaluates to some value of that type:
+\begin{align*}
+\typevaljudge\menv\mexp\Int \Rightarrow \beval\menv\mexp\mint\\
+\typevaljudge\menv\mexp\Bool \Rightarrow \beval\menv\mexp\mbool\\
+\end{align*}
+Thus the relation captures a class of well-behaved programs that do no
+cause type errors.  The natural semantics employed here could either
+be the one that considers erroneous programs meaningless or the
+explicit error semantics.
+
+There is a small wrinkle here having to do with divide-by-zero errors,
+and even without seeing the definition of the relation, you may be
+(rightfully) doubting the above claims.  Let us punt on the wrinkle
+for now and consider $\Div$ banished from $\Barith$ (we will restore
+it later).
+
+At first approximation, you might think of the ``$:$'' as a strange
+kind of evaluation relation, which gives an approximation of the
+``real'' relation ``$\Downarrow$.''  Instead of saying exactly what an
+expression evaluates to, the ``:'' says what set of values the result
+belongs to.  That intuition can guide the definition of the relation.
+So for example, an integer expression evaluates to something in
+$\Int$, and a Boolean evaluates to someting in $\Bool$:
+\begin{mathpar}
+\inferrule{\ }
+          {\typevaljudge\menv\mint\Int}
+
+\inferrule{\ }
+          {\typevaljudge\menv\mbool\Bool}
+\end{mathpar}
+Likewise, variables bound to integers and Booleans behave similarly:
+\begin{mathpar}
+\inferrule{\menv(\mvar) = \mint}
+          {\typevaljudge\menv\mvar\Int}
+
+\inferrule{\menv(\mvar) = \mbool}
+          {\typevaljudge\menv\mvar\Bool}
+\end{mathpar}
+If an expression $\mexp$ evaluates to something in $\Int$, so does
+$\Succ(\mexp)$ and $\Pred(\mexp)$:
+\begin{mathpar}
+\inferrule{\typevaljudge\menv\mexp\Int}
+          {\typevaljudge\menv{\Pred(\mexp)}\Int}
+
+\inferrule{\typevaljudge\menv\mexp\Int}
+          {\typevaljudge\menv{\Succ(\mexp)}\Int}
+\end{mathpar}
+If expressions $\mexp_1$ and $\mexp_2$ evaluate to values in $\Int$,
+then $\Plus(\mexp_1,\mexp_2)$ and $\Mult(\mexp_1,\mexp_2)$ evaluate to
+values in $\Int$ and $\Eq(\mexp_1,\mexp_2)$ evaluates to values in
+$\Bool$:
+\begin{mathpar}
+\inferrule{\typevaljudge\menv{\mexp_1}\Int \\
+           \typevaljudge\menv{\mexp_2}\Int}
+          {\typevaljudge\menv{\Plus(\mexp_1,\mexp_2)}\Int}
+
+\inferrule{\typevaljudge\menv{\mexp_1}\Int \\
+           \typevaljudge\menv{\mexp_2}\Int}
+          {\typevaljudge\menv{\Mult(\mexp_1,\mexp_2)}\Int}
+
+\inferrule{\typevaljudge\menv{\mexp_1}\Int \\
+           \typevaljudge\menv{\mexp_2}\Int}
+          {\typevaljudge\menv{\Eq(\mexp_1,\mexp_2)}\Bool}
+\end{mathpar}
+Finally, there is the matter of $\If$.  It's clear that the test
+expression $\If(\mexp_1,\mexp_2,\mexp_3)$ should evaluate to some
+value in $\Bool$, but what should the whole expression evaluate to?
+If all we know of $\mexp_1$ is it evaluates to a Boolean, then the
+whole expression either evaluates to the value of $\mexp_1$ or
+$\mexp_2$.  But which is it?  One approach is to require $\mexp_1$ and
+$\mexp_2$ to evaluate to values within the same set.  You've probably
+encountered this before: both branches of an $\If$ must have the same
+type.  Adopting this approach, the rule is:
+\begin{mathpar}
+\inferrule{\typevaljudge\menv{\mexp_1}\Bool\\
+           \typevaljudge\menv{\mexp_2}\mtype\\
+           \typevaljudge\menv{\mexp_3}\mtype}
+          {\typevaljudge\menv{\If(\mexp_1,\mexp_2,\mexp_3)}\mtype}
+\end{mathpar}
+
+Now we have a typing relation, although it's not exactly clear what we
+have gained.  After all, we could have just run a program to discover
+if it caused an error.  That said, it still may be cheaper, even for
+this simple type system, to compute the type than to compute the
+evaluation.  As our language grows, the gap between the resources
+required to run and analyze a program can grow without bound, so this
+point shouldn't be entirely disregarded.  However, the real value of
+this system comes into play after making the following observation:
+the environment plays no role in the type relation other than to
+signify the types of variables by supplying a witness to the type.
+In other words, in the typing derivation of
+\[
+\typevaljudge{[\mathit{x}\mapsto 4]}{\If(\Eq(\mathit{x},7),\False,\True)}{\Bool}
+\]
+it doesn't matter at all that $\mathit{x}$ is bound to $4$ in
+particular.  Any integer would have sufficed to prove this program
+produces a Boolean.  Intuitively, we can make a much stronger claim
+about this program, which is that on any integer input, the program
+does not produce an error.  By reasoning about a single ``abstract''
+run of the program, we can conclude facts about all possible
+``concrete'' runs: none of them produce errors.
+
+We can make this claim precise with a relation on environments.  
+First, let's define:
+\begin{align*}
+\typeof(\mint) = \Int\\
+\typeof(\mbool)= \Bool
+\end{align*}
+Two environments ``agree,'' written $\menv \sim \menv'$ when they map
+variables to values of the same type:
+\begin{mathpar}
+\inferrule
+{\forall \mvar \in \dom(\menv) . \typeof(\menv(\mvar)) = \typeof(\menv'(\mvar))}
+{\menv \sim \menv'}
+\end{mathpar}
+
+\begin{claim}
+If $\typevaljudge\menv\mexp\mtype$ and $\menv \sim \menv'$, then 
+$\typevaljudge{\menv'}\mexp\mtype$.
+\end{claim}
+\begin{proof}
+By structural induction on the derivation of $\typevaljudge\menv\mexp\mtype$.  The
+integer and Boolean cases are trivial.  The variable cases follow from
+the definition of $\sim$.  The remaining cases follow by induction.
+\end{proof}
+
+Since the environment really only informs the system of the type of
+each varialbe, we can replace the value environment with a
+\deftech{type environment} that directly maps a variable to its type.
+We use the metavariable $\Gamma$ to range over type environments.  The
+type judgment is obtained simply by replacing $\menv$ with $\Gamma$ in
+all the rules except the variable rules, which are replaced with:
+\begin{mathpar}
+\inferrule{\Gamma(\mvar) = \mtype}
+          {\typevaljudge\Gamma\mexp\mtype}
+\end{mathpar}
+%
+We can extend the ``$\sim$'' relation to relate type environments and
+value environments:
+\begin{mathpar}
+\inferrule
+{\forall \mvar \in \dom(\Gamma) . \Gamma(\mvar) = \typeof(\menv(\mvar)) }
+{\Gamma \sim \menv}
+\end{mathpar}
+The soundness of the typing judgment formalizes our understanding of
+the classification of programs into those that do not produce errors
+and those that may:
+\begin{claim}
+If $\typevaljudge\Gamma\mexp\mtype$ and $\Gamma \sim \menv$, then
+$\beval\menv\mexp\mval$ and $\typeof(v) = t$.
+\end{claim}
+\begin{proof}
+By structural induction on the derivation of $\typevaljudge\Gamma\mexp\mtype$.
+\end{proof}
+
+Type systems are arguably the most effective and widely used formal
+verification tool in use today.  In the development above, we've come
+up with a fairly simple type system that can prove the absence of
+certain errors in programs.  In our case, the class of errors is
+simple; it rules out errors arising from branching on non-Booleans and
+applying numeric operators to non-numeric arguments.  Much of the work
+in developing type systems has been in developing richer notions of
+errors and corresponding type judgements that safely classify error
+free programs.  But every type system must necessarily throw good
+programs out with the bad.  For example, this type system rejects the
+following error free programs:
+\begin{align*}
+\If(\mathit{x},7,\False)\mbox{, where $\mathit{x}:\Bool$}\\
+\If(\False,\Eq(\True,1),7)\\
+\If(\mathit{x},\If(\mathit{x},7,\Eq(\True,1)),8)\mbox{, where $\mathit{x}:\Bool$}\\
+\end{align*}
+
+\paragraph{Note on Runtime Errors:} 
+Type systems often only rule out a certain class of errors.  Which
+class depends on the particular type system.  The system we've just
+developed rules out all errors except $\Err_{\Div0}$ errors, which
+were ommitted from the presentation for simplicity.  To be precise
+about divide-by-zero errors would require some tedious and
+uninteresting additions to the semantics and conditions on the claims.
+
+
+\subsection{Abstract Interpretation with Types}
+
+In this section, let's take an alternative perspective on the type
+judgement of the previous section.  If ``$:$'' is a funny analog of
+``$\Downarrow$'', a natural question is what is the reduction
+semantics equivalent of ``$:$''?
+
+First, let's embed types in the language of $\Barith$ expressions:
+\[
+\begin{array}{llcl}
+  & \mexp & ::= & \dots\ |\ \mtype
+\end{array}
+\]
+
+The reduction axioms are easy to read-off from the typing judgement:
+\begin{mathpar}
+\inferrule{\ }
+          {\envreduce[\Gamma]\mint\treduce\Int}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]\mbool\treduce\Bool}
+
+\inferrule{\Gamma(\mvar) = \mtype}
+          {\envreduce[\Gamma]{\mvar}\treduce\mtype}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Pred(\Int)}\treduce\Int}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Succ(\Int)}\treduce\Int}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Plus(\Int,\Int)}\treduce\Int}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Mult(\Int,\Int)}\treduce\Int}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Eq(\Int,\Int)}\treduce\Bool}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\If(\Bool,\mtype,\mtype)}\treduce\mtype}
+\end{mathpar}
+We can define $\compat\treduce$ as the compatible closure of
+$\treduce$ over the grammar of expressions and $\multicompat\treduce$
+as the reflexive, transitive closure of $\compat\treduce$.  Analogs of
+the type soundness property hold in this system, too.
+\begin{claim}
+\label{claim:reduce-soundness}
+If $\envreduce[\Gamma]\mexp{\multicompat\treduce}\mtype$ and
+$\Gamma\sim\menv$, then
+$\envreduce\mexp{\multicompat\breducename}\mval$ and $\typeof(\mval)=\mtype$.
+\end{claim}
+\begin{exercise}
+Prove claim \ref{claim:reduce-soundness}.
+\end{exercise}
+
+More than just a change of notation, the reduction semantics view
+opens up some new design possibilities.  For example, the $\If$ axiom
+requires both branches to be reduced to (abstract) values, i.e.~types,
+before proceeding.  What if we mimicked the original semantics more
+closely and replace the $\If$ rule with the following:
+\begin{mathpar}
+\inferrule{\ }
+          {\envreduce[\Gamma]{\If(\Bool,\mexp_1,\mexp_2)}{\treduce'}{\mexp_1}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\If(\Bool,\mexp_1,\mexp_2)}{\treduce'}{\mexp_2}}
+\end{mathpar}
+
+While the above is a more precise abstraction of the $\breducename$
+semantics, it leads to some potentially undesirable properties.  The
+semantics are not consistent and claim~\ref{claim:reduce-soundness} is
+not true.  Consider the example from earlier:
+\[
+\If(\mathit{x},7,\False)\text{, where }\mathit{x}:\Bool
+\]
+In the $\treduce'$ semantics, this program reduces to both $\Int$ and
+$\Bool$.
+
+\begin{exercise}
+Construct a counterexample to claim~\ref{claim:reduce-soundness} for $\treduce'$.
+\end{exercise}
+
+The $\multicompat{\treduce'}$ semantics, however, does offer some
+strong guarantees.  In particular, the semantics is useful for
+informing us of what the program \emph{does not evaluate to}.  If
+ruling out behaviors such as type errors is all we care about, this is
+just as useful as the previous system which informed of us of what the
+program does evaluate to.  After all, saying a program always
+evaluates to an integer is a way of saying what it does not evaluate
+to, also.
+
+So we can formalize this with the following claim:
+\begin{claim}\label{claim:neg-soundness-small}
+If $\neg(\envreduce[\Gamma]\mexp{\multicompat{\treduce'}}\mtype)$ and $\Gamma\sim\menv$, then
+$\neg(\envreduce\mexp{\multicompat{\breducename}}\mval)$ where $\typeof(\mval)=\mtype$.
+\end{claim}
+While true, this negative formulation doesn't quite let us conclude
+that some programs are error free.  The solution is to again mimick
+the original semantics more closely and explicitly characterize the
+error behavior of programs.
+
+Suppose we add rules corresponding the axioms for creating and
+propogating errors (only showing a small excerpt):
+\begin{mathpar}
+\inferrule{\mtype \neq \Bool}
+          {\envreduce[\Gamma]{\If(\mtype,\mexp_1,\mexp_2)}{\treduce'}{\Err_{\If0}}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\If(\merr,\mexp_1,\mexp_2)}{\treduce'}{\merr}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Eq(\merr,\mexp)}{\treduce'}\merr}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Eq(\mtype,\merr)}{\treduce'}\merr}
+\end{mathpar}
+Programs now reduce to a type or an error, which we'll call a type answer:
+\[
+\begin{array}{llcl}
+\mathit{TyAns}  & \mtans & ::= & \mtype\ |\ \merr
+\end{array}
+\]
+We need to relate type answers and answers, which we do by a
+relation $\mans \sqsubseteq \mtans$:
+\begin{mathpar}
+\inferrule{\typeof(\mval) = \mtype}
+          {\mval \sqsubseteq \mtype}
+
+\inferrule{\ }
+          {\merr \sqsubseteq \merr}
+\end{mathpar}
+We can now state a generalization of claim~\ref{claim:neg-soundness-small}:
+\begin{claim}\label{claim:neg-soundness}
+If $\neg(\envreduce[\Gamma]\mexp{\multicompat{\treduce'}}\mtans)$ and $\Gamma\sim\menv$, then
+$\neg(\envreduce\mexp{\multicompat{\breducename}}\mans)$ where $\mans \sqsubseteq \mtans$.
+\end{claim}
+We can also state this claim in an equivalent way which says that if a
+program can evaluate to some answer, then an appoximation of that
+answer is in the abstract evaluation of the program:
+\begin{claim}[Soundness]\label{claim:soundness}
+If $\envreduce\mexp{\multicompat{\breducename}}\mans$ and
+$\Gamma\sim\menv$, then
+$\envreduce[\Gamma]\mexp{\multicompat{\treduce'}}\mtans$ where $\mans
+\sqsubseteq \mtans$.
+\end{claim}
+\begin{exercise}
+Prove claim~\ref{claim:soundness}.
+\end{exercise}
+
+The above formulation let's us talk about error-freedom in a more
+refined way since we can say exactly what kind of errors a program may
+or may not have.  In fact, it's easy now to deal with divide-by-zero
+errors by including reduction axioms for $\Div$:
+\begin{mathpar}
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Div(\Int,\Int)}{\treduce'}{\Int}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Div(\Int,\Int)}{\treduce'}{\Err_{\Div0}}}
+\end{mathpar}
+The case on the right may seem unfortunate because it says that
+\emph{any} program that includes a $\Div$ operation which may be
+evaluated can cause a divide-by-zero error, including things like
+$\Div(12,4)$.  But that's no different that the guarantee OCaml gives
+you when it says an expression is of type {\tt int}.  In the system
+above, at least we can say that if an expression does not (abstractly)
+reduce to $\Err_{\Div0}$, then it definitely cannot produce a
+divide-by-zero error.
+
+The development of the reduction-based formulation of type system is
+an instance of \deftech{abstract interpretation}.  And in fact, the
+original type judgement can be seen as a further abstract
+interpretation of the reduction semantics.  Abstract interpretation
+(AI) is a general theory of semantic approximation.  Therefore it
+serves as a good foundation for the theory of static analysis since
+static analysis consists of computable semantic approximations.  (AI
+is also useful beyond static analysis as it can be used to related
+different forms of semantics such as natural semantics and reduction
+semantics.)
+
+%% The theory of abstract interpretation is grounded in the theory of
+%% lattices and Galois connections, which relates two partially ordered
+%% sets.  Before studying AI in detail though, let's just develop another
+%% example to gain intuitions.
+
+
+%% \subsection{Abstract Interpretation with Intervals}
+
+
+%% In an abstract interpretation, we have two kinds of values: concrete
+%% values, which are drawn from the semantics of our programming
+%% language, and abstract values, which are drawn from the particular
+%% domain which we choose to approximate programs.  In the previous
+%% section, concrete values consisted of integers, Booleans, and errors;
+%% abstract values consisted of types and errors.
+
+%% \begin{align*}
+%% \alpha(A) &= \bigcup_{\mans\in A} \{ \alpha_{\Ans}(\mans) \}\text{, where}\\
+%% \alpha_\mans(\mint) &= \Int\\
+%% \alpha_\mans(\mbool) &= \Bool\\
+%% \alpha_\mans(\merr) &= \merr
+%% \end{align*}
+
+%% \begin{align*}
+%% \gamma(T) &= \bigcup_{\mtans \in T} x
+%% \end{align*}
+
+
+
+
+%% \subsection{Programs Gone Wrong}
+
+%% A type error is any error that arises from the program using the wrong
+%% kind of value than required by the language, such as in
+%% $\Mult(\False,4)$.  To be precise, the set of type errors for
+%% $\Barith$ are:
+%% \[
+%% \mathit{TypeError} = \{ \Err_\ell\ |\
+%% \ell \in \{ \If, \Pred, \Succ, \Eq1, \Eq2, \Div1, \Div2, \Mult1, \Mult2, \Plus1, \Plus2 \} \cup \mathit{Var}\}
+%% \]
+
+
+%% Let's formally define the property of programs:
+
+%% \begin{align*}
+%% P(\menv,\mexp) \iff \menv \vdash \mexp =_\breducename \merr \text{, where } \merr \in \mathit{TypeError}\\
+%% Q(\mexp) \iff \exists \menv. \menv\text{ closes } \mexp\text{ and } \vdash \mexp =_\breducename \merr \text{, where } \merr \in \mathit{TypeError}
+%% \end{align*}
+
