@@ -395,6 +395,48 @@ It's also possible to compute the set of all values related to {\tt
 The set of related terms is given as a list of results (in case, it's
 always a singleton list).
 
+\subsection{From Judgements to Reduction Relations}
+
+The Redex {\tt reduction-relation} form is tailored toward writing
+relations as a set of axioms.  Most of the inductive parts of a
+reduction relation are computed as contextual or compatible closures,
+which use the grammar of contexts or terms to guide the induction.
+This is often, but not always, what is needed.  In cases where a
+reduction relation requires a more general set of inference rules, a
+useful modeling strategy is to define the relation as a judgment and
+then define a reduction relation in terms of the judgment.  As an
+example, here is a model of the natural numbers and a formulation of
+``$\geq$'' as a reduction relation using this strategy:
+\begin{verbatim}
+#lang racket
+(require redex)
+
+(define-language Natural
+  (N ::= Z (S N)))
+
+(define-judgment-form Natural
+  #:mode (>= I O)
+  [(>= N N)]
+  [(>= N_0 N_1)
+   ---------------
+   (>= (S N_0) N_1)])
+
+(define ->>= 
+  (reduction-relation 
+   Natural
+   (--> N_0 N_1
+        (judgment-holds (>= N_0 N_1)))))
+
+(traces ->>= (term (S (S (S Z)))))
+\end{verbatim}
+
+Running the reduction relation on the example of 3 produces the
+following graph:
+\begin{center}
+\includegraphics{figs/gte-graph.pdf}
+\end{center}
+
+
 \subsection{Property-Based Testing}
 
 Semantic models are often buggy, just like programs.  One of the
