@@ -6,6 +6,15 @@
 \newcommand\Ans{\mathit{Ans}}
 \newcommand\TyAns{\mathit{TyAns}}
 
+\newcommand\meint{i^\dagger}
+\newcommand\moeint{j^\dagger}
+\newcommand\mintv{\vec\mint}
+\newcommand\mointv{\vec\moint}
+
+\newcommand\BI{\mathcal{BI}}
+\newcommand\ireduce{\mathbf{i}}
+\newcommand\intvdiv{\mathop\backslash}
+
 \section{Proving the Absence of (Certain Kinds of) Errors}
 
 It would be nice to eliminate all programs that have errors in them.
@@ -35,7 +44,7 @@ misclassify some good programs as bad, but no bad program will be
 classified as good.
 
 
-\subsection{Type Judgments}
+\subsection{Type Judgments}\label{sec:type-judgments}
 
 In the language of $\Barith$ expressions, there are two kinds of data:
 Booleans and integers.  We can formalize a judgment on programs that
@@ -58,7 +67,7 @@ If a program $(\menv,\mexp)$ is related to $\mtype$ it means the
 program evaluates to some value of that type:
 \begin{align*}
 \typevaljudge\menv\mexp\Int \Rightarrow \beval\menv\mexp\mint\\
-\typevaljudge\menv\mexp\Bool \Rightarrow \beval\menv\mexp\mbool\\
+\typevaljudge\menv\mexp\Bool \Rightarrow \beval\menv\mexp\mbool
 \end{align*}
 Thus the relation captures a class of well-behaved programs that do no
 cause type errors.  The natural semantics employed here could either
@@ -182,7 +191,7 @@ the definition of $\sim$.  The remaining cases follow by induction.
 \end{proof}
 
 Since the environment really only informs the system of the type of
-each varialbe, we can replace the value environment with a
+each variable, we can replace the value environment with a
 \deftech{type environment} that directly maps a variable to its type.
 We use the metavariable $\Gamma$ to range over type environments.  The
 type judgment is obtained simply by replacing $\menv$ with $\Gamma$ in
@@ -224,7 +233,7 @@ following error free programs:
 \begin{align*}
 \If(\mathit{x},7,\False)\mbox{, where $\mathit{x}:\Bool$}\\
 \If(\False,\Eq(\True,1),7)\\
-\If(\mathit{x},\If(\mathit{x},7,\Eq(\True,1)),8)\mbox{, where $\mathit{x}:\Bool$}\\
+\If(\mathit{x},\If(\mathit{x},7,\Eq(\True,1)),8)\mbox{, where $\mathit{x}:\Bool$}
 \end{align*}
 
 \paragraph{Note on Runtime Errors:} 
@@ -236,7 +245,7 @@ about divide-by-zero errors would require some tedious and
 uninteresting additions to the semantics and conditions on the claims.
 
 
-\subsection{Abstract Interpretation with Types}
+\subsection{Abstract Interpretation with Types}\label{sec:ai-types}
 
 In this section, let's take an alternative perspective on the type
 judgement of the previous section.  If ``$:$'' is a funny analog of
@@ -424,7 +433,279 @@ semantics.)
 %% example to gain intuitions.
 
 
-%% \subsection{Abstract Interpretation with Intervals}
+\subsection{Abstract Interpretation with Intervals}\label{sec:ai-intv}
+
+In this section, let's develop another abstract interperation of
+$\Barith$, this time with a more refined abstract domain.  On
+integers, we'll use intervals and interpret the integer operations
+using interval arithmetic and on Booleans we'll do no approximation.
+Intervals will be represented as a pair of extended integers,
+i.e. integers extended with ``$\infty$'' and ``$-\infty$''.  We'll use
+$\meint$ and $\moeint$ to range over extended integers and $\mintv$
+and $\mointv$ to range over intervals, i.e. pairs of extended integers
+$(\meint,\moeint)$ where we assume $\meint$ is either $-\infty$ or an
+integer and $\moeint$ is either $\infty$ or an integer.  An interval
+is interpreted as a non-empty set of integers in the following way:
+\begin{align*}
+(-\infty,\infty) &= \mathbb{Z}\\
+(-\infty,\moint) &= \{ \mint'\ |\ \mint' \leq \moint \}\\
+(\mint,\infty) &= \{ \mint'\ |\ \mint \leq \mint' \}\\
+(\mint,\moint) &= \{ \mint'\ |\ \mint \leq \mint' \leq \moint \}
+\end{align*}
+
+We define the $\BI$ language as $\Barith$, but with intervals in place
+of integers in the set of values:
+\[
+\begin{array}{llcl}
+\mathit{Exp}  & \mexp & ::= & \dots\ |\ \mint\ |\ \mintv\\
+\mathit{Val}  & \mval & ::= & \mintv\ |\ \mbool
+\end{array}
+\]
+
+Instead of a type environment as used in $\treduce$, we'll let
+$\Gamma$ range over interval environments that map variables to
+intervals (or Booleans).
+%
+The reduction axioms are easy in many cases:
+\begin{mathpar}
+\inferrule{\ }
+          {\envreduce[\Gamma]\mint\ireduce(\mint,\mint)}
+
+\inferrule{\Gamma(\mvar) = \mval}
+          {\envreduce[\Gamma]\mvar\ireduce\mval}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Pred(\mintv)}\ireduce{\mintv - (1,1)}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Succ(\mintv)}\ireduce{\mintv + (1,1)}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Plus(\mintv,\mointv)}\ireduce{\mintv + \mointv}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\Mult(\mintv,\mointv)}\ireduce{\mintv \cdot \mointv}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\If(\True,\mexp_1,\mexp_2)}\ireduce{\mexp_1}}
+
+\inferrule{\ }
+          {\envreduce[\Gamma]{\If(\False,\mexp_1,\mexp_2)}\ireduce{\mexp_2}}
+\end{mathpar}
+These definitions make use of extended interval arithmetic operations
+``$+$'', ``$-$'', and ``$\cdot$''.  Interval arithmetic is well
+understood mathematical domain, and these operations can be
+illustrated with just a few examples:
+\begin{align*}
+(1,5)+(3,9) &= (1,14)\\
+(2,5)\cdot(3,9) &= (6,45)\\
+(-\infty,5)\cdot(3,9) &= (-\infty,45)
+\end{align*}
+
+Things get trickier with equality.  Because an interval represents a
+set of potential integer values, $\Eq(\mintv,\mointv)$ must produce
+$\True$ whenever there are two equal integers in the sets denoted by
+$\mintv$ and $\mointv$ and $\False$ whenever there are two unequal
+integers in the sets.
+\begin{mathpar}
+\inferrule{\exists\mint\in\mintv.\exists\moint\in\mointv.\mint=\moint}
+          {\envreduce[\Gamma]{\Eq(\mintv,\mointv)}\ireduce{\True}}
+
+\inferrule{\exists\mint\in\mintv.\exists\moint\in\mointv.\mint\neq\moint}
+          {\envreduce[\Gamma]{\Eq(\mintv,\mointv)}\ireduce{\False}}
+\end{mathpar}
+These definitions give the most precise relation our interval
+abstraction allows; i.e. this is the best approximation possible
+without changing the domain.  The preconditions form a good
+specification, but clearly an implementation should not enumerate the
+(potentially infinite) integers in $\mintv$ and $\mointv$ to check the
+for (in-)equality.  Instead, produce $\True$ whenever $\mintv$ and
+$\mointv$ overlap at all.  Determining when to produce $\False$
+requires a little more thought.  You want to produce $\False$ almost
+all the time.  When should $\False$ not be one of the results?
+
+Things get even trickier with division.  First, here are some examples
+of integer division on intervals:
+\begin{align*}
+(12,24)\mathop\backslash(3,4) &= (3,8)\\
+(12,24)\mathop\backslash(3,\infty) &= (0,8)\\
+(12,\infty)\mathop\backslash(3,\infty) &= (0,\infty)
+\end{align*}
+Interval division is not defined when $0$ is in the denominator
+interval.
+
+It's tempting to define $\ireduce$ for $\Div$ as the following:
+\begin{mathpar}
+\inferrule{0 \not\in \mointv}
+          {\envreduce[\Gamma]{\Div(\mintv,\mointv)}\ireduce{\mintv \mathop{\backslash} \mointv}}
+
+\inferrule{0 \in \mointv}
+          {\envreduce[\Gamma]{\Div(\mintv,\mointv)}\ireduce{\Err_{\Div0}}}
+\end{mathpar}
+But this definition is not sound.  To see why, let's formalize the
+soundness property.  Again, it will be in terms of a refinement
+relation between answers of $\Barith$ and $\BI$:
+\begin{mathpar}
+\inferrule{\mint \in \mintv}
+          {\mint \sqsubseteq \mintv}
+
+\inferrule{\ }
+          {\merr \sqsubseteq \merr}
+
+\inferrule{\ }
+          {\mbool \sqsubseteq \mbool}
+\end{mathpar}
+This relation is lifted to environments as usual:
+\begin{mathpar}
+\inferrule{\forall \mvar \in \dom(\menv) . \menv(\mvar) \sqsubseteq \Gamma(\mvar)}
+          {\menv \sqsubseteq \Gamma}
+\end{mathpar}
+Assuming $\multicompat\ireduce$ is the reflexive transitive closure of
+the compatible closure of $\ireduce$, the soundness claim is then:
+\begin{claim}[Soundness]\label{claim:intv-soundness}
+If $\envreduce\mexp{\multicompat{\breducename}}\mans$ and
+$\menv \sqsubseteq \Gamma$, then
+$\envreduce[\Gamma]\mexp{\multicompat{\ireduce}}\mans'$ where $\mans
+\sqsubseteq \mans'$.
+\end{claim}
+\begin{exercise}
+Construct a counterexample to claim~\ref{claim:intv-soundness} using
+the faulty definition of $\ireduce$ for $\Div$.
+\end{exercise}
+
+\begin{exercise}
+Design the best sound alternative of $\ireduce$ for $\Div$.
+By sound, it should validate claim~\ref{claim:intv-soundness};
+by best, it should be the smallest relation that does so.
+\end{exercise}
+
+\subsection{Refinement Types}
+
+In section~\ref{sec:type-judgments} we developed a simple type system
+that ruled out type errors.  By viewing the typing judgement as a
+approximate evaluation relation, we explored an equivalent formulation
+of the type system as an approximate reduction relation in
+section~\ref{sec:ai-types}.  We then revealed a more precise semantics
+for proving the absence of type errors.  In section~\ref{sec:ai-intv},
+we developed an interval abstraction of the reduction semantics for
+$\Barith$.  We can also go in the opposite direction and derive a
+further approximation of the interval abstraction in the form of a
+natural semantics.  This semantics takes the form of a type judgment,
+where the the language of types is refined by an interval in the case
+of integers:
+\[
+\begin{array}{llcl}
+\mathit{Type}  & \mtype & ::= & \Bool\ |\ \Int(\mintv)
+\end{array}
+\]
+
+The type $\Int(\mintv)$ is known as a \deftech{refinement type}, which
+is a type qualified by a predicate which holds for every value of that
+type.  For our purposes, the predicates only include intervals, but
+richer refinement type systems can be defined by embeding richer
+logics of predicates into the types.  Refinement types, while not
+quite mainstream yet, are featured in several mature research project
+such as the refinement type system for F\# called
+F7\footnote{\url{http://research.microsoft.com/en-us/projects/f7/}}
+and a variant of Haskell with refinements called Liquid
+Haskell\footnote{\url{http://goto.ucsd.edu/~rjhala/liquid/haskell/blog/about/}}.
+
+To derive the type system from the reduction semantics, we start with
+a straightfoward reformulation of most of the axioms:
+
+\begin{mathpar}
+\inferrule{\ }
+          {\typevaljudge\Gamma\mint{\Int(\mint,\mint)}}         
+
+\inferrule{\Gamma(\mvar) = \mtype}
+          {\typevaljudge\Gamma\mint{\mtype}}
+
+\inferrule{\typevaljudge\Gamma\mexp{\Int(\mintv)}}
+          {\typevaljudge\Gamma{\Pred(\mexp)}{\Int(\mintv-(1,1))}}
+
+\inferrule{\typevaljudge\Gamma\mexp{\Int(\mintv)}}
+          {\typevaljudge\Gamma{\Succ(\mexp)}{\Int(\mintv+(1,1))}}
+
+\inferrule{\typevaljudge\Gamma{\mexp_1}{\Int(\mintv)} \\
+           \typevaljudge\Gamma{\mexp_2}{\Int(\mointv)}}
+          {\typevaljudge\Gamma{\Plus(\mexp_1,\mexp_2)}{\Int(\mintv+\mointv)}}
+
+\inferrule{\typevaljudge\Gamma{\mexp_1}{\Int(\mintv)} \\
+           \typevaljudge\Gamma{\mexp_2}{\Int(\mointv)}}
+          {\typevaljudge\Gamma{\Mult(\mexp_1,\mexp_2)}{\Int(\mintv\cdot\mointv)}}
+
+\inferrule{\typevaljudge\Gamma{\mexp_1}{\Int(\mintv)} \\
+           \typevaljudge\Gamma{\mexp_2}{\Int(\mointv)}}
+          {\typevaljudge\Gamma{\Eq(\mexp_1,\mexp_2)}{\Bool}}
+
+\inferrule{\typevaljudge\Gamma{\mexp_1}{\Bool} \\
+           \typevaljudge\Gamma{\mexp_2}{\mtype_2} \\
+           \typevaljudge\Gamma{\mexp_3}{\mtype_3} \\
+           \mtype = \mtype_2 \sqcup \mtype_3}
+          {\typevaljudge\Gamma{\If(\mexp_1,\mexp_2,\mexp_3)}{\mtype}}
+\end{mathpar}
+The rule for $\If$ joins the type of its branches with the $\sqcup$
+function, which is defined as:
+\begin{mathpar}
+\inferrule{\ }
+          {\Bool \sqcup \Bool = \Bool}
+
+\inferrule{\meint = \min(\meint_1,\meint_2) \\ \moeint = \max(\moeint_1,\moeint_2) }
+          {(\meint_1,\moeint_1) \sqcup (\meint_2,\moeint_2) = (\meint,\moeint)}
+\end{mathpar}
+The rule for $\Div$ can be quite conservative and require that $0$ not
+be in the denominator.  This rules out many programs, but is sound.
+If we require the typing judgment to be a function, it is the only
+option we have:
+\begin{mathpar}
+\inferrule{\typevaljudge\Gamma{\mexp_1}{\Int(\mintv)} \\
+           \typevaljudge\Gamma{\mexp_2}{\Int(\mointv)} \\
+           0 \not\in \mointv}
+          {\typevaljudge\Gamma{\Div(\mexp_1,\mexp_2)}{\Int(\mintv\intvdiv\mointv)}}
+\end{mathpar}
+
+
+\begin{claim}
+  If $\typevaljudge\Gamma\mexp\mtype$ and $\menv \sqsubseteq \Gamma$, then
+  $\beval\menv\mexp\mval$ and $\mval \sqsubseteq \mtype$.
+\end{claim}
+This claim relies on the following definition of $\sqsubseteq$:
+\begin{mathpar}
+\inferrule{\ }
+          {\mbool \sqsubseteq \Bool}
+
+\inferrule{\mint \in \mintv}
+          {\mint \sqsubseteq \Int(\mintv)}
+
+\inferrule{\forall \mvar \in \dom(\menv).\menv(\mvar) \sqsubseteq \Gamma(\mvar) }
+          {\menv \sqsubseteq \Gamma}
+          
+\end{mathpar}
+
+\begin{exercise}
+Interval refinements as defined above are a course-grained
+approximation because an interval is given by a single pair of
+extended integers; this abstraction cannot express, for example, that
+an integer $\mint$ is approximated by a set such as $(-5 \leq \mint
+\leq -2) \vee (2 \leq \mint \leq 5)$.  However interval arithmetic is
+perfectly capable of operating on finite unions of intervals.  Design
+a refinement type system that refines integers by sets of intervals.
+It should prove the safety of the following program:
+\[
+[\mvar\mapsto \Int\{(-5,-2),(2,5)\}] \vdash \Div(5,\mvar):\Int\{(-2,-1),(1,2)\}
+\]
+\end{exercise}
+
+% \subsection{Symbolic Execution}
+
+
+
+% \subsection{Type Inference}
+
+
+%% If $\mint \in \mintv$, $\moint \in \mointv$, and $\mint' = \mint
+%% \intvdiv \moint$ then ${\Div(\mintv,\moint)}\mathop{\ireduce}{\mintv'}$ where
+%% $\mint' \in \mintv'$.
 
 
 %% In an abstract interpretation, we have two kinds of values: concrete
