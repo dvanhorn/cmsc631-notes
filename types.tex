@@ -15,6 +15,12 @@
 \newcommand\ireduce{\mathbf{i}}
 \newcommand\intvdiv{\mathop\backslash}
 
+\newcommand\mpath{\phi}
+\newcommand\mcon{c}
+\newcommand\msval{sv}
+
+
+
 \section{Proving the Absence of (Certain Kinds of) Errors}
 
 It would be nice to eliminate all programs that have errors in them.
@@ -618,7 +624,7 @@ a straightfoward reformulation of most of the axioms:
           {\typevaljudge\Gamma\mint{\Int(\mint,\mint)}}         
 
 \inferrule{\Gamma(\mvar) = \mtype}
-          {\typevaljudge\Gamma\mint{\mtype}}
+          {\typevaljudge\Gamma\mvar{\mtype}}
 
 \inferrule{\typevaljudge\Gamma\mexp{\Int(\mintv)}}
           {\typevaljudge\Gamma{\Pred(\mexp)}{\Int(\mintv-(1,1))}}
@@ -696,7 +702,62 @@ It should prove the safety of the following program:
 \]
 \end{exercise}
 
-% \subsection{Symbolic Execution}
+\subsection{Symbolic Execution}
+
+Symbolic execution is another approach to reasoning about all possible
+executions of program that is achieved by considering inputs to a
+program symbolically.  In other words, if a program takes as input an
+integer \(\mathit{x}\), we will run the program using ``\(\mathit{x}\)''
+as a placeholder for any possible integer.  This is not unlike how we
+reason mathematically.  If you see the function
+\[
+f(x) = x \cdot 0\text,
+\]
+this is equivalent to \(f(x) = 0\); there's no need to wait until the
+function is applied to a particular input to come to this conclusion.
+
+Similarly, if we have the following program:
+\[
+\If(\Eq(\Plus(\mathit{x},\mathit{x}), \Mult(2,\mathit{x})), 3, 4)\text,
+\]
+it's easy to see it can never reduce to 4, no matter what value
+\(\mathit{x}\) takes on.
+
+Symbolic reasoning often involves reasoning by implication.  For
+example, consider a slight tweak to the above program:
+\[
+\If(\Eq(\mathit{x},\mathit{y}),
+ \If(\Eq(\Plus(\mathit{x},\mathit{x}), \Mult(2,\mathit{y})), 3, 4),
+  8)\text.
+\]
+This program also cannot reduce to 4, no matter what values
+\(\mathit{x}\) or \(\mathit{y}\) take on.  The reasoning is obvious:
+if \(\mathit{x}\) is not equal to \(\mathit{y}\), the \(\If\) takes the
+alternative branch and the result is 8.  If \(\mathit{x}\) is equal to
+\(\mathit{y}\), the \(\If\) takes the consequent branch, which is just the
+example from before, but with an \(\mathit{x}\) replaced with a
+\(\mathit{y}\).  But we've already assumed \(\mathit{x}\) equals
+\(\mathit{y}\), so of course the same facts should hold as before.
+
+We call the logical assertion \(\mathit{x} = \mathit{y}\) a
+\deftech{path condition} on the execution of the consequent branch.
+Likewise, there is a (unneeded) path condition on the alternative,
+which asserts \(\mathit{x} \neq \mathit{y}\).
+
+%% The idea behind symbolic execution is to augment our reduction
+%% semantics to deal with symbolic data, namely variables, and to build
+%% up facts about the program as a logic statement about what must be
+%% true at any given point during the execution.
+
+
+%% \[
+%% \begin{array}{llcl}
+%% \mathit{Symbolic\ value}  & \msval & ::= & \mvar\ |\ \mval\\
+%% \mathit{Path\ condition}  & \mpath & ::= & \{ \mcon, \dots \}\\
+%% \mathit{Condition}        & \mcon  & ::= & \mvar = \msval\cdot\msval\ |\ \mvar = \msval\ |\ \mvar \neq \msval\\
+     
+%% \end{array}
+%% \]
 
 
 
