@@ -36,8 +36,8 @@
 \inferrule{\mval_1 \not\in {#3} }
           {\envreduce{{#2}(\mval_1,\mval_2)}{#1}{\Err_{{#2}1}}}
 
-\inferrule{\mval_2 \not\in {#3} }
-          {\envreduce{{#2}(\mval_1,\mval_2)}{#1}{\Err_{{#2}2}}}
+\inferrule{\mval \not\in {#3} }
+          {\envreduce{{#2}(\mint,\mval)}{#1}{\Err_{{#2}2}}}
 }
 
 
@@ -366,7 +366,7 @@ formulated them, have also caused an important change to our
 semantics.  Unlike in the error-free case of $\Arith$, our evaluation
 relation is no longer a function.  To see this, consider
 $\Eq(\Div(3,0),\False)$.  This expression either produces a divide by
-zero error ($\Err_{\Div0}$), or a type error ($\Err_\If$) for giving a
+zero error ($\Err_{\Div0}$), or a type error ($\Err_{\Eq2}$) for giving a
 Boolean to $\Eq$.  This is concerning for anyone who wants to write an
 interpreter for, or reason about, $\Barith$ programs.  If we were
 writing an interpreter, we should wonder ``what should it produce for
