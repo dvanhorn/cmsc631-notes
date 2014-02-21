@@ -13,13 +13,16 @@
 
 \newcommand\BI{\mathcal{BI}}
 \newcommand\ireduce{\mathbf{i}}
+\newcommand\sreduce{\mathbf{s}}
 \newcommand\intvdiv{\mathop\backslash}
 
 \newcommand\mpath{\phi}
 \newcommand\mcon{c}
 \newcommand\msval{sv}
+\newcommand\mcset{\mathcal{T}}
+\newcommand\mtcons{tc}
 
-
+\newcommand\allows[2][\mpath]{#1\models #2}
 
 \section{Proving the Absence of (Certain Kinds of) Errors}
 
@@ -739,30 +742,342 @@ example from before, but with an \(\mathit{x}\) replaced with a
 \(\mathit{y}\).  But we've already assumed \(\mathit{x}\) equals
 \(\mathit{y}\), so of course the same facts should hold as before.
 
-We call the logical assertion \(\mathit{x} = \mathit{y}\) a
+We call the logical assertion \(\Eq(\mathit{x}, \mathit{y})\) a
 \deftech{path condition} on the execution of the consequent branch.
 Likewise, there is a (unneeded) path condition on the alternative,
-which asserts \(\mathit{x} \neq \mathit{y}\).
+which asserts \(\neg\Eq(\mathit{x},\mathit{y})\).
 
-%% The idea behind symbolic execution is to augment our reduction
-%% semantics to deal with symbolic data, namely variables, and to build
-%% up facts about the program as a logic statement about what must be
-%% true at any given point during the execution.
+The idea behind symbolic execution is to augment our reduction
+semantics to deal with symbolic data, namely variables, and to build
+up facts about the program as a logical statement about what must be
+true at any given point during the execution.  The form of the logical
+statement is a conjunction of conditions which must hold at that point
+in the execution.  If an inconsistent set of facts are ever reached,
+we can conclude that state of execution is infeasible and cannot
+actually be reached.
+\[
+\begin{array}{llcl}
+\mathit{Symbolic\ value}  & \msval & ::= & \mvar\ |\ \mval\\
+\mathit{Path\ condition}  & \mpath & ::= & \{ \mcon, \dots \}\\
+\mathit{Condition}        & \mcon  & ::= & \mvar\ |\ \neg\mcon\ |\ \Eq(\mvar,\Pred(\mvar))\ |\ \Eq(\mvar,\Succ(\mvar))\\
+                          &        & |\  & \Eq(\mvar,\Mult(\msval,\msval))\ |\ \Eq(\mvar,\Div(\msval,\msval))\ |\ \Eq(\msval,\msval)
+\end{array}
+\]
+
+The reduction of an expression is formulated as a reduction relation
+on expression and path condition pairs:
+$\envreduce[\relax]{(\mexp,\mpath)}\sreduce{(\mexp',\mpath')}$.  The
+meaning of such a reduction is that $\mexp$, under the assumptions of 
+$\mpath$, may reduce to to $\mexp'$, implying conditions $\mpath'$.
+
+We use a relation on path conditions $\allows\mcon$, which denotes
+that $\mpath$ ``allows'' $\mcon$ to be true; in other words
+$\mpath\cup\{\mcon\}$ is not a contradiction.  You can think of the
+$\allows\mcon$ judgement as being an embedded model checker in our
+language.  We can produce a tighter characterization of a program's
+behavior (i.e.~produce a smaller reduction graph) if we use a powerful
+model checker, but so long as the model checker is sound, the
+semantics will be sound.  The simplest sound model checker is just the
+one that allows everything:
+\begin{mathpar}
+\inferrule{\ }
+          {\allows\mcon}
+\end{mathpar}
+A slightly more refined one is the following:
+\begin{mathpar}
+\inferrule{\neg\mcon \not\in \mpath}
+          {\allows\mcon}
+
+\inferrule{\mcon \not\in \mpath}
+          {\allows\neg\mcon}
+
+\inferrule{\mvar:\Bool \not\in \mpath}
+          {\allows{\mvar:\Int}}
+
+\inferrule{\mvar:\Int \not\in \mpath}
+          {\allows{\mvar:\Bool}}
+\end{mathpar}
+In general what we want is:
+\begin{mathpar}
+\inferrule{\mpath \cup \{\mcon\} \mbox{ is satisfiable }}
+          {\allows\mcon}
+\end{mathpar}
+In our case, the logical formulas are expressed in first-order logic
+with equality, using a theory of integer arithmetic.  Such
+satisfiability problems are ubiquitous in computer science. The
+\deftech{Satisfiability Modulo Theories} (SMT) problem is a decision
+problem for logical formulas with background theories expressed in
+first-order logic with equality.  You've probably heard of the Boolean
+satisfiability problem (SAT), which is just an instance of the SMT
+problem, using Boolean arithmetic as the underlying theory.  Other
+theories might include the theories of real numbers, intervals, data
+structures, and so on.  There are many mature SMT solvers available
+(e.g.~Z3, CVC4), which can effecitvely decide $\allows\mcon$.  If we
+had a richer language, the path conditions would involve richer
+theories, which may not be decidable.  At that point, a sound
+approximation would need to be used.
+
+Let's now look at some of the reduction rules:
+\begin{mathpar}
+\inferrule{\allows{\mvar}}
+          {\envreduce[\relax]{\If(\mvar,\mexp_1,\mexp_2), \mpath}\sreduce{\mexp_1}, \mpath \cup \{ \mvar\} }
+
+\inferrule{\allows{\neg\mvar}}
+          {\envreduce[\relax]{\If(\mvar,\mexp_1,\mexp_2), \mpath}\sreduce{\mexp_2}, \mpath \cup \{ \neg\mvar\} }
+\end{mathpar}
+Here, an $\If$ takes the consequent branch whenever the test variable
+may be true (determined by using $\allows\mvar$) and adds $\mvar$ to
+the path condition.  Symmetrically, $\If$ takes the alternative
+whenever the test may be false and adds $\neg\mvar$ to the path
+condition.
+
+You may wonder why $\mvar$ is added to $\mpath$ if $\allows\mvar$
+already holds.  The answer is that $\allows\mvar$ only determines if
+it is possible that $\mvar$ is true.  When $\mvar$ is added to the
+path condition, we are asserting that $\mvar$ \emph{is} true.
+Consider this example:
+\[
+\If(\mathit{x}, \If(\mathit{x}, 1, 2), 3)
+\]
+This program can produce either 1 or 3 because $\mathit{x}$ may be
+either true or false, but it cannot produce 2 because that would
+require $\mathit{x}$ to be true in the first conditional and false in
+the second.  This is reflected in the reduction semantics because
+$\allows[\emptyset]{\mathit{x}}$ and
+$\allows[\emptyset]{\neg\mathit{x}}$ in the first conditional.  But
+when the consequent branch is taken, we add $\mathit{x}$ to the path
+condition, which rules out producing 2 since it's not the case that
+$\allows[\{\mathit{x}\}]{\neg\mathit{x}}$.
+
+Here are some rules for arithmetic operations:
+\begin{mathpar}
+\inferrule{\ }
+          {\envreduce[\relax]{\Pred(\mvar),\mpath}\sreduce{\mvar',\mpath\cup\{\Eq(\mvar',\Pred(\mvar))\}}}
+
+\inferrule{\ }
+          {\envreduce[\relax]{\Succ(\mvar),\mpath}\sreduce{\mvar',\mpath\cup\{\Eq(\mvar',\Succ(\mvar))\}}}
+
+\inferrule{\ }
+          {\envreduce[\relax]{\Plus(\msval_1,\msval_2),\mpath}\sreduce{\mvar',\mpath\cup\{\Eq(\mvar',\Plus(\msval_1,\msval_2))\}}}
+
+\inferrule{\ }
+          {\envreduce[\relax]{\Mult(\msval_1,\msval_2),\mpath}\sreduce{\mvar',\mpath\cup\{\Eq(\mvar',\Mult(\msval_1,\msval_2))\}}}
+\end{mathpar}
+In each of these rules, the variable $\mvar'$ is introduced by
+reduction.  These variables are understood to be ``fresh'', i.e.~they
+are variables that have not been used before.
+
+The $\Div$ rule is more interesting since we have pre- and
+post-conditions on the denominator:
+\begin{mathpar}
+\inferrule{\allows{\neg\Eq(0,\msval_2)} }
+          {\envreduce[\relax]{\Div(\msval_1,\msval_2),\mpath}\sreduce{\mvar',\mpath\cup\{\Eq(\mvar',\Div(\msval_1,\msval_2)), \neg\Eq(0,\msval_2)\}}}
+
+\inferrule{\allows{\Eq(0,\msval_2)} }
+          {\envreduce[\relax]{\Div(\msval_1,\msval_2),\mpath}\sreduce{\Err_{\Div0}, \mpath\cup\{\Eq(0,\msval_2)\}}}
+\end{mathpar}
+Finally, we have the rule for $\Eq$:
+\begin{mathpar}
+\inferrule{\allows{\Eq(\msval_1,\msval_2)}}
+          {\envreduce[\relax]{\Eq(\msval_1,\msval_2),\mpath}\sreduce{\True, \mpath\cup\{\Eq(\msval_1,\msval_2)\}}}
+
+\inferrule{\allows{\neg\Eq(\msval_1,\msval_2)}}
+          {\envreduce[\relax]{\Eq(\msval_1,\msval_2),\mpath}\sreduce{\False, \mpath\cup\{\neg\Eq(\msval_1,\msval_2)\}}}
+\end{mathpar}
 
 
-%% \[
-%% \begin{array}{llcl}
-%% \mathit{Symbolic\ value}  & \msval & ::= & \mvar\ |\ \mval\\
-%% \mathit{Path\ condition}  & \mpath & ::= & \{ \mcon, \dots \}\\
-%% \mathit{Condition}        & \mcon  & ::= & \mvar = \msval\cdot\msval\ |\ \mvar = \msval\ |\ \mvar \neq \msval\\
-     
-%% \end{array}
-%% \]
+
+\subsection{Type Inference}
+
+
+Type inference is the process of searching for a proof of the type
+correctness of a program.  In terms of the $\Barith$ language, we can
+think of it as the problem of determining for an expression $\mexp$ if
+there is a type environment $\Gamma$ and type $\mtype$ that exist,
+such that $\typevaljudge\Gamma\mexp\mtype$.
+
+Type inference is a common feature of some typed programming
+languages.  For example, OCaml is able to infer the types of programs
+which make no mention of types in their source text:
+\begin{verbatim}
+# let rec fact n =
+    if (n = 0)
+    then 1
+    else n * fact (n-1);;
+val fact : int -> int = <fun>
+\end{verbatim}
+Here, OCaml is tell us that it successfully found a proof that the
+program is well-typed, and moreover has the type {\tt int -> int},
+i.e.~it consumes and produces integers.  It is able to do this without
+any explicit mention of types in the program.
+
+The process of type inference is not unlike the process a programmer
+might use to discover the type of this program.  Imagine we start
+knowing nothing about {\tt fact}.  We can see from the shape of it's
+definition that it is a function, so we must determine it's input type
+and output type.  Looking at the body of the function, we see {\tt n}
+is compared to {\tt 0}.  This constrains {\tt n} to be a integer,
+since {\tt n} is a argument to the integer equality operation.  Later,
+{\tt n} is an argument to both subtraction and multiplication
+operations, which also implies {\tt n} must be an integer.  To
+determine the output type of the function, we can see that {\tt fact}
+produces {\tt 1} in one branch of the conditional.  Thus it could
+produce an integer.  In the other branch, it produces the result of
+multiplication, which also implies the output type is integer.
+Finally the fact that {\tt fact} is the argument to a multiplication
+operation also suggests it needs to produce an integer.
+
+In this informal analysis what we've done is collect a set of
+contraints on the usage of variables.  If that set of constraints is
+consistent, i.e. a variable is not used as an integer in one place and
+as a Boolean in another, then we conclude the program is type correct.
+This informal process can be made rigorous to produce a type inference
+algorithm.  The idea will be to generate a set of type
+constraints---equations between types and variables---and then try to
+solve the system of equations.  If the equations have a solution, the
+program is type correct.  If they don't, we can conclude the program
+is ill-typed.
+
+
+In this setting, a type constraint is an equation between types
+$\mtype = \mtype'$, but which may contain variables (we'll call a type
+with no variables in it a ground type).  A constraint set $\mcset$ is
+a set of type constraints.
+\[
+\begin{array}{llcl}
+\mathit{Types}              & \mtype  & ::= & \Int\ |\ \Bool\ |\ \mvar\\
+\mathit{Type\ contraints}   & \mcset  & ::= & \{\mtype = \mtype', \dots\}
+\end{array}
+\]
+The way that type constraints are generated is by a type constraint
+judgement that produces a type (or variable) and a set of constraints.
+The judgement $\typevaljudge\relax\mexp{\mtype,\mcset}$ is defined for
+all expressions.  This is unlike the type judgement from
+section~\ref{sec:type-judgments}, which was only defined for ``good''
+programs.  Instead the type constraint judgement will produce a set of
+constraints for any program, but ill-typed programs generate
+inconsistent constraint sets.
+
+Here is the inference rule for $\Pred$:
+\begin{mathpar}
+\inferrule{\typevaljudge\relax\mexp{\mtype,\mcset}}
+          {\typevaljudge\relax{\Pred(\mexp)}{\Int,\mcset \cup \{ \mtype = \Int \}}}
+\end{mathpar}
+Compare this with the type judgement for $\Pred$ from section~\ref{sec:type-judgments}:
+\begin{mathpar}
+\inferrule{\typevaljudge\Gamma\mexp\Int}
+          {\typevaljudge\Gamma{\Pred(\mexp)}{\Int}}
+\end{mathpar}
+The key difference is that rather than place any restrictions on the
+precondition of the rule, in this case that $\mexp$ has type $\Int$,
+the constraint version expresses this by adding $\mtype = \Int$ to the
+set of constraints.  In order for $\Pred(\mexp)$ to be well-typed,
+these constraints must have a solution, which means the type of
+$\mexp$ will be $\Int$.
+
+Many other cases are straightforward following this blueprint.  In
+each case, we place no conditions in the premise of a rule, but
+instead move them to the set of constraints that must be satisfied.
+Here is the rule for $\Mult$, for example:
+\begin{mathpar}
+\inferrule{\typevaljudge\relax{\mexp_1}{\mtype_1,\mcset_1} \\
+           \typevaljudge\relax{\mexp_2}{\mtype_2,\mcset_2}}
+          {\typevaljudge\relax{\Mult(\mexp_1,\mexp_2)}{\Int,\mcset_1 \cup \mcset_2 \cup \{ \mtype = \Int \}}}
+\end{mathpar}
+
+The remaining interesting rules are for variables and conditionals:
+\begin{mathpar}
+\inferrule{\ }
+          {\typevaljudge\relax\mvar{\mvar,\emptyset}}
+
+\inferrule{\typevaljudge\relax{\mexp_i}{\mtype_i,\mcset_i} \\ i \in \{1,2,3\}}
+          {\typevaljudge\relax{\If(\mexp_1,\mexp_2,\mexp_3)}{\mtype_2,\bigcup_{i\in\{1,2,3\}} \mcset_i \cup \{ \mtype_1 = \Bool, \mtype_2 = \mtype_3\}}}
+\end{mathpar}
+A variable generates no constraints, because a variable occurrence
+alone doesn't imply anything about how the value of the variable is
+used.  But the type of a variable is just the variable's name.  So if
+the variable occurrs in some context that constrains its type, a type
+constraint will be generated for the variable.  For example,
+$\Pred(\mvar)$ generates the constraint $\mvar = \Int$.  If a variable
+occurs in multiple contexts that use the variable with different types
+will generate an inconsistent set of constraints.  For example,
+$\If(\mvar,\Succ(\mvar),8)$ will generate the unsolvable equations
+$\{\mvar = \Bool, \mvar = \Int\}$.
+
+An $\If$ expression generates type constraints for all its
+subexpressions and then constrains the type of the test expression to
+be a Boolean and the types of the consequent and alternative to be
+equal.  Since they are constrained to be equal, we could have used
+$\mtype_1$ instead of $\mtype_2$ as the result type and it wouldn't
+make a difference.
+
+Once a constraint set is generated, there is the issue of finding out
+if the constraints have a solution.
+
+\newcommand\unify{\mathit{U}}
+\newcommand\solve{\mathit{unify}}
+\newcommand\msubst{\psi}
+
+
+The general problem of determing if a set of equations between terms
+has a solution is known as the \deftech{unification problem}.
+%
+The way we will represent a solution to an instance of the unification
+problem is as a substitution that unifies all of the equations.  A
+substitution is partial function from variables to types.  So if given
+a set of constraints $\mcset$, we will try to construct a substitution
+$\msubst$ such that $\msubst(\mcset)$ produces a set of trivial
+equations: $\msubst(\mcset) = \{\mtype_1 = \mtype_1, \mtype_2 =
+\mtype_2, \dots\}$.
 
 
 
-% \subsection{Type Inference}
 
+The unification of a set of equations is given by the following
+function, $\solve(\mcset)$:
+\begin{gather*}
+\solve(\mcset) = \unify(\mcset,\emptyset)\mbox{ where } \\
+\begin{align}
+\unify(\emptyset,\msubst) &= \msubst\\
+\unify(\{\mtype = \mtype\}\cup\mcset,\msubst) &= \unify(\mcset,\msubst)\\
+\unify(\{\mvar  = \mtype\}\cup\mcset,\msubst) &= 
+\begin{cases}
+\unify(\mcset,\msubst[\mtype/\mvar] \circ [\mvar \mapsto \mtype]) & \mbox{if }\msubst(\mvar) = \bot\\
+\unify(\mcset \cup \{ \mtype=\mtype' \},\msubst) & \mbox{if }\msubst(\mvar) = \mtype'\\
+\end{cases}\\
+\unify(\{\mtype = \mvar\}\cup\mcset,\msubst) &= 
+\unify(\{\mvar  = \mtype\}\cup\mcset,\msubst) 
+\end{align}
+\end{gather*}
+
+The algorithm works by iteratively removing constraints, building a
+substitution, until there are no constraints left.  If a constraint is
+trivial, i.e.~it is of the form $\mtype = \mtype$, then it is removed.
+If a constraint is between a variable and a type, and the variable is
+not already in the solution, then the type replaces the variable in
+the substitution (denoted $\msubst[\mtype/\mvar]$) and the mapping
+from the variable to the type is added to the solution.  If the
+variable is already in the substitution, a new constraint is added to
+equate the type and what's given by the substitution.
+
+The unification is sound and complete: it produces a substitution
+whenver one exists, and the substitution produced is always a
+solution.  If a solution exists, the program is well-typed under some
+typing environment:
+\begin{claim}
+If $\typevaljudge\relax\mexp{\mtype,\mcset}$ and $\solve(\mcset) =
+\msubst$, then there exists $\Gamma$ and $\mtype'$ such that
+$\typevaljudge\Gamma\mexp{\mtype'}$.
+\end{claim}
+
+The typing environment is \emph{almost} the same as the substituion
+$\msubst$, but we have to be a little careful about underconstrained
+variables.  For example in this program:
+$\If(\True,\mathit{x},\mathit{y})$, the variables $\mathit{x}$ and
+$\mathit{y}$ must have the same type, which also the type of the whole
+program, but the solution to the constraints generated by this program
+is either $[\mathit{x}\mapsto\mathit{y}]$ or vice versa, which is not
+a type environment.
 
 %% If $\mint \in \mintv$, $\moint \in \mointv$, and $\mint' = \mint
 %% \intvdiv \moint$ then ${\Div(\mintv,\moint)}\mathop{\ireduce}{\mintv'}$ where
