@@ -24,7 +24,7 @@
 
 \newcommand\allows[2][\mpath]{#1\models #2}
 
-\section{Proving the Absence of (Certain Kinds of) Errors}
+\section{Reasoning About All Program Executions} %Proving the Absence of (Certain Kinds of) Errors}
 
 It would be nice to eliminate all programs that have errors in them.
 In general, it's not possible to mechanically determine if a program
@@ -405,7 +405,7 @@ $\envreduce[\Gamma]\mexp{\multicompat{\treduce'}}\mtans$ where $\mans
 Prove claim~\ref{claim:soundness}.
 \end{exercise}
 
-The above formulation let's us talk about error-freedom in a more
+The above formulation lets us talk about error-freedom in a more
 refined way since we can say exactly what kind of errors a program may
 or may not have.  In fact, it's easy now to deal with divide-by-zero
 errors by including reduction axioms for $\Div$:
