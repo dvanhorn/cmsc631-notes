@@ -1,12 +1,12 @@
 \section{Syntax, Semantics, \& Machines for Arithmetic}
 
-\subsection{Modelling Syntax with Inductive Sets}
+  \subsection{Modelling Syntax with Inductive Sets}
 
-The \emph{syntax} of a programming language is a set of rules for the
-arrangement of words and phrases to create well-formed sentences in
-the language.  In other words, it is the grammar of programs.  Syntax
-comes in two forms: \emph{concrete syntax} describes the way programs
-actually look at the level of braces, semicolons, whitespace, etc.,
+  The \emph{syntax} of a programming language is a set of rules for the
+    arrangement of words and phrases to create well-formed sentences in
+  the language.  In other words, it is the grammar of programs.  Syntax
+    comes in two forms: \emph{concrete syntax} describes the way programs
+	       actually look at the level of braces, semicolons, whitespace, etc.,
 while \emph{abstract syntax} describes the structure of programs
 without worrying over the superficial details of concrete syntax.
 Concrete syntax, while the stuff of frenzied fervor, is actually not
@@ -350,9 +350,12 @@ $\Plus(4,\Succ(2))$ doesn't step to anything.  The
 reason is that our axioms only apply when the arguments to operators
 are integers, which is not the case here.  It is true that
 $\Succ(2)$ steps to $3$, but none of the rules allows us to
-evaluate inside of a nested expression.  Let's define another relation
-, $\step\; \subseteq \Arith \times \Arith$, that allows steps within
-nested expressions.
+evaluate inside of a nested expression.  
+
+
+
+Let's define another relation , $\step\; \subseteq \Arith \times
+\Arith$, that allows steps within nested expressions.
 %
 For the language of $\Arith$ this amounts to taking the
 \deftech{compatible closure} of $\reduce$ over the grammar of
@@ -462,6 +465,96 @@ differently, is the same relation as $\Downarrow$.  Seen this way, it
 is accurate to say natural semantics are an \deftech{abstraction} of
 reduction semantics, and reduction semantics are a
 \deftech{refinement} of natural semantics.
+
+
+To model the reduction semantics in OCaml, we can first define the
+axiomatic reduction relation, $\areducename$.  First, observe that
+$\areducename$ is a \emph{function}; if $\areduce\mexp{\mexp'}$ and
+$\areduce\mexp{\mexp''}$, then $\mexp' = \mexp''$.  Therefore we can
+model the relation as a function on expressions.  However,
+$\areducename$, when viewed as a function, is \emph{partial}; not all
+expressions reduce according to $\areducename$.  For example, $\mint
+\not\areducename\; \mexp$, for any $\mexp$.
+
+We can model a partial function from expressions to integers as a
+total function from expressions to an integer options.  Optional types
+are a useful way to encode either getting something or nothing:
+\begin{verbatim}
+type 'a option =
+  | None
+  | Some of 'a
+\end{verbatim}
+This type is so useful, it's built in.  Now defining $\areducename$ in
+OCaml consists in translating the defining judgements into an OCaml
+function:
+\begin{verbatim}
+   let a (e : arith) : arith option =
+     match e with
+       | Pred (Int i) -> Some (Int (i-1))
+       | Succ (Int i) -> Some (Int (i+1))
+       | Plus (Int i, Int j) -> Some (Int (i+j))
+       | Mult (Int i, Int j) -> Some (Int (i*j))
+       | _ -> None
+\end{verbatim}
+Some examples:
+\begin{verbatim}
+   # a (Int 4);;
+   - : arith option = None
+
+   # a (Succ (Int 5));;
+   - : arith option = Some (Int 6)
+
+   # a (Plus (Succ (Int 5), Succ (Int 4)));;
+   - : arith option = None
+\end{verbatim}
+
+To characterize $\step$, which is not a function, but a more general
+relation, which means we need to represent $\step$ as a function from
+expressions to \emph{sets of} expressions.  We can encode this set as
+a list.  Therefore the signature of {\tt step\_a} will be {\tt arith ->
+  arith list}:
+\begin{verbatim}
+   let rec step_a (e : arith) : arith list =
+     match a e with
+       | None -> 
+           (match e with
+              | Int i -> []
+              | Pred e -> List.map (fun e' -> Pred e') (step_a e)
+              | Succ e -> List.map (fun e' -> Succ e') (step_a e)
+              | Plus (e1, e2) -> 
+                  let f e1s e2s = List.map
+                    (fun (e1',e2') -> Plus (e1', e2'))
+                    (cartesian e1s e2s)
+                  in
+                    (f (step_a e1) [e2]) @ (f [e1] (step_a e2))
+              | Mult (e1, e2) ->
+                  let f e1s e2s = List.map
+                    (fun (e1',e2') -> Mult (e1', e2'))
+                    (cartesian e1s e2s)
+                  in
+                    (f (step_a e1) [e2]) @ (f [e1] (step_a e2)))
+       | Some e' -> [e']
+\end{verbatim}
+where
+\begin{verbatim}
+   let cartesian (l : 'a list) (l' : 'b list) : ('a * 'b) list =
+     List.concat (List.map (fun e -> List.map (fun e' -> (e,e')) l') l) 
+\end{verbatim}
+Some examples:
+\begin{verbatim}
+   # step_a (Int 4);;
+   - : arith list = []
+
+   # step_a (Succ (Int 5));;
+   - : arith list = [Int 6]
+
+   # step_a (Plus (Succ (Int 5), Succ (Int 4)));;
+   - : arith list = [Plus (Int 6, Succ (Int 4)); Plus (Succ (Int 5), Int 5)]
+\end{verbatim}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \begin{exercise}
 Prove $e \Downarrow i \iff e \downarrow i$.
@@ -745,7 +838,78 @@ The rules for reducing inside expressions are not quite compatibility
 rules because they do not allow a reduction axiom to be apply to
 \emph{any} subexpression.  Instead, they encode a \deftech{reduction
   strategy} that specifies the one subexpression where an axiom may be
-applied.  This same strategy can also be defined through the use of
+applied.
+
+We can represent the $\astdstep$ relation in OCaml like we did for
+$\areducename$:
+
+\begin{verbatim}
+   let rec standard_step_a (e : arith) : arith list =
+     match a e with
+       | None ->
+           (match e with
+              | Int i -> []
+              | Pred e -> List.map (fun e' -> Pred e') (step_a e)
+              | Succ e -> List.map (fun e' -> Succ e') (step_a e)
+              | Plus (e1, e2) -> 
+                  let f e1s e2s = List.map
+                    (fun (e1',e2') -> Plus (e1', e2'))
+                    (cartesian e1s e2s)            
+                  in
+                    (match e1 with
+                      | Int i -> (f [e1] (standard_step_a e2))
+                      | _ -> (f (standard_step_a e1) [e2]))
+              | Mult (e1, e2) ->
+                  let f e1s e2s = List.map
+                    (fun (e1',e2') -> Mult (e1', e2'))
+                    (cartesian e1s e2s)
+                  in
+                    (match e1 with
+                       | Int i -> (f [e1] (standard_step_a e2))
+                       | _ -> (f (standard_step_a e1) [e2])))
+       | Some e' -> [e']
+\end{verbatim}
+
+Some examples:
+\begin{verbatim}
+   # standard_step_a (Int 4);;
+   - : arith list = []
+
+   # standard_step_a (Plus (Succ (Int 5), Succ (Int 4)));;
+   - : arith list = [Plus (Int 6, Succ (Int 4))]
+\end{verbatim}
+
+You should be able to convince yourself that {\tt standard\_step\_a}
+always produces either an empty list or a singleton list.  In other
+words, $\astdstep$ is a partial function, being encoded here as a
+relation.  We could rewrite the code to produce an {\tt arith option},
+or we could use a function to provide that interface:
+\begin{verbatim}
+   let rel_to_partial_func (r : ('a -> 'a list)) : ('a -> 'a option) =
+     fun a ->
+       match r a with
+         | [] -> None
+         | a::_ -> Some a
+\end{verbatim}
+
+Now we can compute an alternative interface for standard reduction:
+\begin{verbatim}
+   let standard_step_a' = rel_to_partial_func standard_step_a
+\end{verbatim}
+
+Some examples:
+\begin{verbatim}
+   # standard_step_a' (Int 4);;
+   - : arith option = None
+
+   # standard_step_a' (Plus (Succ (Int 5), Succ (Int 4)));;
+   - : arith option = Some (Plus (Int 6, Succ (Int 4)))
+\end{verbatim}
+
+
+
+Instead of specifying the strategy by way of progress rules, the
+same strategy can also be defined through the use of
 contexts, but instead of using arbitrary contexts, we will specify the
 subset of contexts in which reduction may occur.  These contexts are
 called \emph{evaluation contexts}:
@@ -870,12 +1034,12 @@ let rec eval (e : arith) : int =
     Int i -> i
   | _ -> 
     let Some (c, e') = decompose e in
-    let Some r = reduce e' in
+    let Some r = a e' in
     eval (plug c r)
 \end{verbatim}
 In {\tt decompose e} we know that {\tt e} is not a value, so {\tt
   decompose} is defined on {\tt e} (i.e.~we cannot get {\tt None}),
-and further more, {\tt e'} is a redex, hence {\tt reduce e'} is
+and further more, {\tt e'} is a redex, hence {\tt a e'} is
 defined, so none of these pattern matches can fail.
 
 A quick ``proof by example'' confirms that {\tt eval} produces the
@@ -885,6 +1049,167 @@ section~\ref{sec:natural}:
 # eval (Plus (Int 4, Succ (Int 2)));;
 - : int = 7
 \end{verbatim}
+
+\subsection{Again, with Ambiguity}
+
+Let's now replay the development of the various formulations of
+$\Arith$ with the slighest addition to the language.  Let's add the
+following form of expression: $\Amb(\mexp_1,\mexp_2)$, which we'll
+take to mean ``evaluate, ambiguously, to either the value of $\mexp_1$
+or $\mexp_2$''.
+
+\subsubsection{Natural Semantics}
+
+It's straightforward to extend the evaluation relation to cover the
+$\Amb$ form:
+\begin{mathpar}
+\inferrule{\mexp_1 \Downarrow \mint}
+          {\Amb(\mexp_1,\mexp_2) \Downarrow \mint}
+
+\inferrule{\mexp_2 \Downarrow \mint}
+          {\Amb(\mexp_1,\mexp_2) \Downarrow \mint}
+\end{mathpar}
+However, this changes $\Downarrow$ from being a function from
+expressions to integers to a \emph{relation} from expressions to
+integers.  Because of this, we will run into trouble with our {\tt
+  eval} function in OCaml.  Consider the following naive translation
+of the mathematical definition of $\Downarrow$ into OCaml in the
+presence of $\Amb$:
+\begin{verbatim}
+   type arith = 
+     | Int of int 
+     | Pred of arith
+     | Succ of arith
+     | Plus of arith * arith
+     | Mult of arith * arith 
+
+   let rec eval (e : arith) : int = 
+       match e with
+       | Int i -> i
+       | Pred e -> (eval e) - 1
+       | Succ e -> (eval e) + 1        
+       | Plus (e1, e2) -> (eval e1) + (eval e2)
+       | Mult (e1, e2) -> (eval e1) * (eval e2)
+       | Amb (e1, e2) -> eval e1
+       | Amb (e1, e2) -> eval e2
+\end{verbatim}
+The problem here is that the left-hand sides of the $\Amb$ cases
+overlap.  Since OCaml performs pattern matching in order, the last
+case is not reachable, and the OCaml compiler will tell us as much:
+\begin{verbatim}
+      | Amb (e1, e2) -> eval e2;;
+        ^^^^^^^^^^^^
+Warning 11: this match case is unused.
+val eval : arith -> int = <fun>
+\end{verbatim}
+
+The problem here is the mismatch between the eval function and the
+$\Downarrow$ relation.  An idea to address the problem is to represent
+the relation as a function from expressions to \emph{sets of}
+integers.  While OCaml has a nice, general purpose set library, an
+easy hack is to represent a set as a list.  Therefore the signature of
+{\tt eval} will be {\tt arith -> int list}.
+
+Let's take the function in peices:
+\begin{verbatim}
+let rec eval (e : arith) : int list =
+  match e with
+\end{verbatim}
+The base case is easy: when given an integer, produce the list of its
+results, which is just a list consisting of that integer:
+\begin{verbatim}
+  | Int i -> [i]
+\end{verbatim}
+When we recursively evaluate subexpressions, we no longer get an
+integer back, but instead a list of integers.  In the case of $\Pred$,
+we must then subtract one from each element to obtain the final result:
+\begin{verbatim}
+  | Pred e' -> List.map (fun v -> v-1) (eval e')
+\end{verbatim}
+Successor is similar:
+\begin{verbatim}
+  | Succ e' -> List.map (fun v -> v+1) (eval e')
+\end{verbatim}
+In the case of multiple subexpressions, we will have multiple lists of
+integers to combine into the final result.  Suppose we have
+$\Plus(\mexp_1,\mexp_2)$ where
+\begin{alltt}
+   eval e1 \(=\) [1; 2; 3]
+   eval e2 \(=\) [5; 10]
+\end{alltt}
+Then we want to compute the sums of
+\begin{verbatim}
+   [(1, 5); (2, 5); (3, 5); (1, 10); (2, 10); (3, 10)]
+\end{verbatim}
+which is
+\begin{verbatim}
+   [6; 7; 8; 11; 12; 13]
+\end{verbatim}
+To compute the first list, we just use our helper function for computing
+the Cartesian product of two given lists.
+%
+Now the cases for addition and multiplication are easy:
+\begin{verbatim}
+  | Plus (e1, e2) -> 
+      List.map (fun (v1,v2) -> v1+v2) (cartesian (eval e1) (eval e2))
+  | Mult (e1, e2) -> 
+      List.map (fun (v1,v2) -> v1*v2) (cartesian (eval e1) (eval e2))
+\end{verbatim}
+Finally we have the case of $\Amb$.  Suppose we have $\Amb(\mexp_1,\mexp_2)$ where,
+as before,
+\begin{alltt}
+   eval e1 \(=\) [1; 2; 3]
+   eval e2 \(=\) [5; 10]
+\end{alltt}
+Here we want to produce a list of all of the elements in either list,
+so the thing to do is append the two lists together:
+\begin{verbatim}
+   | Amb (e1, e2) -> eval e1 @ eval e2
+\end{verbatim}
+Putting it all together, we have:
+\begin{verbatim}
+let rec eval (e : arith) : int list =
+  match e with
+  | Int i -> [i]
+  | Pred e -> 
+      List.map (fun v -> v-1) (eval e)
+  | Succ e ->
+      List.map (fun v -> v+1) (eval e)
+  | Plus (e1, e2) -> 
+      List.map (fun (v1,v2) -> v1+v2) (cartesian (eval e1) (eval e2))
+  | Mult (e1, e2) ->
+      List.map (fun (v1,v2) -> v1*v2) (cartesian (eval e1) (eval e2))
+  | Amb (e1, e2) -> eval e1 @ eval e2
+\end{verbatim}
+
+
+\subsubsection{Reduction Semantics}
+
+Adding reduction axioms for $\Amb$ are straightforward:
+\begin{mathpar}
+\inferrule*{\ }
+           {\areduce{\Amb(\mint,\moint)}{\mint}}
+
+\inferrule*{\ }
+           {\areduce{\Amb(\mint,\moint)}{\moint}}
+\end{mathpar}
+But just as $\Downarrow$ went from being a function to a relation once
+$\Amb$ was added, $\areducename$, goes from a (partial) function to a
+relation.  So we can no longer represent $\areducename$ as a partial
+function in OCaml and switch to a relation encoding:
+\begin{verbatim}
+   let a (e : arith) : arith list =
+     match e with
+       | Pred (Int i) -> [Int (i-1)]
+       | Succ (Int i) -> [Int (i+1)]
+       | Plus (Int i, Int j) -> [Int (i+j)]
+       | Mult (Int i, Int j) -> [Int (i*j)]
+       | Amb (Int i, Int j) -> [Int i; Int j]
+       | _ -> []
+\end{verbatim}
+
+This necessitates a change to {\tt step\_a} and {\tt standard\_step\_a}.
+
 
 %% \subsection{Stack Machine}
 
