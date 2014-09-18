@@ -1050,6 +1050,84 @@ section~\ref{sec:natural}:
 - : int = 7
 \end{verbatim}
 
+\subsection{Compiling}
+
+What is a compiler?
+
+One view is the following: a compiler is a function that consumes a
+program and produces a program, which when run produces the same
+result as the given progam.
+
+In other words,
+\begin{verbatim}
+   let compile (e : arith) : (unit -> int) = ...
+\end{verbatim}
+such that
+\begin{alltt}
+   \(\forall\)e. compile e () = eval e
+\end{alltt}
+
+Make a correct compiler is trivial:
+\begin{verbatim}
+   (* Correct compiler, ground truth *)
+   let rec compile_0 (e : arith) : (unit -> int) =
+     (fun () -> eval e)
+
+   (* Simple test *)
+   let p = (Plus (Int 1, Int 2)) in
+     eval p = compile_0 p ();;
+\end{verbatim}
+While this compiler is trivial, it does create an explicit distinction
+between \emph{compiling} and \emph{running}.  Code outside the {\tt
+  fun} is the compile-time code; code inside the {\tt fun} is run-time
+code.  The trivial compiler says at compile time, do nothing; at
+run-time, run the interpreter.  Perfectly sensible.
+
+
+We could however have the compiler actually do some work and hope to
+reap the benefits at run-time.  Taken to its logical conclusion, the
+compiler could just do \emph{all} of the work, then generate code that
+returns the result:
+\begin{verbatim}
+   (* Optimal inlining compiler *)
+   let rec compile_1 (e : arith) : (unit -> int) =
+     let i = eval e in
+       (fun () -> i)
+\end{verbatim}
+This compiler runs the program at compile-time and produces a constant
+function that returns the result.  This approach won't work for richer
+languages, but it's not a bad way to optimize languages with decidable
+evaluation relations (such as $\Arith$).
+
+A more scalable thing to do is to compile away the run-time overhead
+of syntactic case analysis for the expression being run:
+\begin{verbatim}
+   (* Tagless run-time *)
+   let rec compile_2 (e : arith) : (unit -> int) =
+     match e with
+       | Int i -> (fun () -> i)
+       | Pred e -> 
+          let c = compile_2 e in
+	    (fun () -> c () - 1)
+       | Succ e -> 
+          let c = compile_2 e in
+            (fun () -> c () + 1)
+       | Plus (e1, e2) ->
+          let c1 = compile_2 e1 in
+          let c2 = compile_2 e2 in
+            (fun () -> c1 () + c2 ())
+      | Mult (e1, e2) ->
+          let c1 = compile_2 e1 in
+          let c2 = compile_2 e2 in
+            (fun () -> c1 () * c2 ())
+\end{verbatim}
+
+Notice that at run-time, the code does not dispatch on the kind of
+expression is being run; there's nothing left at run-time but OCaml's
+arithmetic operations and function calls to run code.
+
+
+
 \subsection{Again, with Ambiguity}
 
 Let's now replay the development of the various formulations of
