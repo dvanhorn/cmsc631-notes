@@ -52,6 +52,212 @@ programs as \emph{definitely} not having this kinds of errors or
 misclassify some good programs as bad, but no bad program will be
 classified as good.
 
+\subsection{Classifying phrases according to the kinds of answers they compute}
+
+If we were to consider classifying phrases according to the kinds of
+answers they compute, the most precise characterization would be to
+classify phrases by \emph{the set of answers} they compute.
+
+For some simple languages, calculating such a set is trivial.  For
+example, for any $\Arith$ program $\mexp$, it's easy to compute the
+set $\{\mint\ |\ \mexp \Downarrow \mint \}$.  
+%
+Even for $\Barith$, if we consider characterizing phrases $\mexp$ with
+a \emph{given environment} $\menv$, then it's easy to compute $\{
+\mans\ |\ \menv \vdash \mexp \Downarrow \mans \}$.  It's easy to
+compute this characterization because it consists of just a single run
+of the program and $\Barith$ is such a computationally feeble
+language, computing the evaluation of programs is decidable.
+%
+But we might also want to reason about all possible executions of a
+$\Barith$ program.  If we consider the environment as a model of
+program inputs, provided by the external world, then it's reasonable
+to consider the answers a program computes as a function of the
+environment.  In other words, characterize phrases $\mexp$ by the set
+$\{ \mans\ |\ \menv \vdash \mexp \Downarrow \mans\text{, for some
+}\menv\}$.  The trouble is this set is potentially infinite, so
+computing it could take a while.
+
+For this reason, it may be useful to compute a more approximating
+classification of the kinds of answers phrases compute.  Designing
+useful approximating classifications is the art and science of
+\emph{abstract interpretation}.
+
+Let's see a simple instance of this.
+
+Suppose we want to classify phrases not by the precise value they
+compute but rather by whether they compute:
+\begin{itemize}
+\item an integer,
+\item a boolean,
+\item an error, or
+\item some combination of the above.
+\end{itemize}
+
+For example, $\Mult(3, 4)$ should be characterized as computing an
+integer.  $\If(\True,3,\False)$ computes a boolean.
+$\If(\mvar,3,\False)$ computes a boolean, an integer, or an error,
+dependending on the environment.
+
+
+We therefore define the following \emph{abstract answers}:
+%\newcommand\mapreans{\mans^\#}
+\newcommand\abs[1]{#1^{\#}}
+\[
+\begin{array}{llcl}
+\mathit{AbstractAnswer} & \abs\mans & = & \Bool\ |\ \Int\ |\ \Err \\
+%\mathit{AbstractAnswer} & \hat\mans & = & \{ \mapreans, \dots \}
+\end{array}
+\]
+
+Abstract answers denote sets of answers (sometimes called ``concrete''
+answers to contrast abstract answers).  Their meaning is defined as follows:
+\begin{eqnarray*}
+% \den{\{ \mapreans_0, \dots, \mapreans_n \}} &=& \bigcup_{i\in\{0..n\}}{\den{\mapreans_i}}\\
+\den{\Bool} &=& \{ \True, \False\}\\
+\den{\Int} &=& \{ \dots, -1, 0, 1, \dots\}\\
+\den{\Err} &=& \{ \Err_{\Div0}, \Err_{\If}, \Err_{\Plus}, \Err_{\Succ}, \Err_{\Plus1}, \dots \}\\
+\end{eqnarray*}
+
+Now let's explore an abstract evaluation relation for $\Barith$ based
+around the above notion of abstract values.  The idea here is that the
+formulate an alternative relation that operates on abstract values
+instead of values.  There are many abstract evaluation relations.
+What makes them admissable is if they are \emph{sound}, i.e. if it
+possible for an expression to compute a certain kind of answer, that
+answer is in the (denotation) of the abstract answer.  Formally:
+
+\begin{claim}
+If $\menv \vdash \mexp \Downarrow \mans$ for some $\menv$, then there
+exists an $\abs\mans$ such that $\vdash \mexp \Downarrow \abs\mans$ and
+$\mans \in \den{\abs\mans}$.
+\end{claim}
+
+It's quite easy to make a sound, but useless abstract evaluator:
+
+\begin{mathpar}
+\inferrule{\ }
+          {\vdash \mexp \Downarrow \Int}
+
+\inferrule{\ }
+          {\vdash \mexp \Downarrow \Bool}
+
+\inferrule{\ }
+          {\vdash \mexp \Downarrow \Err}
+\end{mathpar}
+
+It's almost always impossible to go the other direction to design an
+abstract evaluator that is \emph{complete}, i.e.:
+\begin{claim}
+If $\vdash \mexp \Downarrow \abs\mans$, then there exists an $\mans$
+and $\menv$ such that $\vdash \mexp \Downarrow \mans$ and $\mans \in
+\den{\abs\mans}$.
+\end{claim}
+
+If we wanted to do better than the useless abstract evaluator, one
+approach is to use the concrete evaluator to guide its design.  Let's
+consider some concrete and abstract cases in tandem:
+\begin{mathpar}
+\inferrule{\menv(\mvar)=\mval}
+          {\menv \vdash \mvar \Downarrow \mval}
+
+\inferrule{\ }
+          {\vdash \mvar \Downarrow \Bool}
+
+\inferrule{\ }
+          {\vdash \mvar \Downarrow \Int}
+\end{mathpar}
+On the left is the concrete evaluation relation for variables, which
+are given meaning in terms of a particular environent.  The abstract
+evaluator must handle all possible environments; since an environment
+may map a variable to an integer or a boolean, the rule states that a
+variable occurrence may evaluate to either $\Bool$ or $\Int$.
+
+This may seem overly conservative; variables range over all possible
+values, which mean that programs involving variables that are treated
+as integers will be abstract interpreted as having errors since they
+variables could stand for booleans.  This is necessary for soundness
+-- indeed we could imagine running such programs with environments
+that don't respect our intentions for how these variables are used.
+But we will return to this question in a bit and show how we can
+reason based on assumptions of how variables will be used.
+
+Here are the concrete and abstract rules for literals:
+\begin{mathpar}
+\inferrule{\ }
+          {\menv \vdash \mint \Downarrow \mint}
+
+\inferrule{\ }
+          {\menv \vdash \mbool \Downarrow \mbool}
+
+\inferrule{\ }
+          {\vdash \mint \Downarrow \Int}
+          
+\inferrule{\ }
+          {\vdash \mbool \Downarrow \Bool}
+\end{mathpar}
+As you can see, the abstract evaluator is losing information; it
+``forgets'' which particular number or boolean a literal evaluators to
+and instead just signals the appropriate set of values the literal
+belongs to.
+
+Here are the concrete and abstract rules for $\Pred$ ($\Succ$ is
+similar):
+\begin{mathpar}
+\inferrule{\menv \vdash \mexp \Downarrow \mint }
+          {\menv \vdash \Pred(\mexp) \Downarrow \mint-1 }
+
+\inferrule{\vdash \mexp \Downarrow \Int}
+          {\vdash \Pred(\mexp) \Downarrow \Int}
+\end{mathpar}
+The error propogation and creation rules can likewise be read-off from
+the concrete rules:
+\begin{mathpar}
+\inferrule{\menv \vdash \mexp \Downarrow \merr}
+          {\menv \vdash \Pred(\mexp) \Downarrow \merr}
+
+\inferrule{\menv \vdash \mexp \Downarrow \mbool}
+          {\menv \vdash \Pred(\mexp) \Downarrow \Err_{\Pred}}
+
+\inferrule{\vdash \mexp \Downarrow \Err}
+          {\vdash \Pred(\mexp) \Downarrow \Err}
+
+\inferrule{\vdash \mexp \Downarrow \Bool}
+          {\vdash \Pred(\mexp) \Downarrow \Err}
+\end{mathpar}
+The $\Plus$ and $\Mult$ cases follow a similar pattern.
+
+Finally, let's consider $\Div$.  When a subexpression produces an error
+or evaluates a boolean follows the same pattern as above, so let's
+focus soley on the ``real'' cases for $\Div$.  First, the concrete cases:
+\begin{mathpar}
+  \inferrule{\menv \vdash \mexp_1 \Downarrow \mint\\
+    \menv \vdash \mexp_2 \Downarrow \moint}
+            {\menv \vdash \Div(\mexp_1,\mexp_2) \Downarrow \lfloor \mint/\moint \rfloor}
+
+  \inferrule{\menv \vdash \mexp_1 \Downarrow \mint\\
+    \menv \vdash \mexp_2 \Downarrow 0}
+            {\menv \vdash \Div(\mexp_1,\mexp_2) \Downarrow \Err_{\Div0}}
+\end{mathpar}
+And now the abstract cases:
+\begin{mathpar}
+  \inferrule{\menv \vdash \mexp_1 \Downarrow \Int\\
+    \menv \vdash \mexp_2 \Downarrow \Int}
+            {\menv \vdash \Div(\mexp_1,\mexp_2) \Downarrow \Int}
+
+  \inferrule{\menv \vdash \mexp_1 \Downarrow \Int\\
+    \menv \vdash \mexp_2 \Downarrow \Int}
+            {\menv \vdash \Div(\mexp_1,\mexp_2) \Downarrow \Err}
+\end{mathpar}
+The thing to notice here is that in the abstract rules the hypotheses
+are the same in both of these rules.  Since our abstraction of
+integers to $\Int$ is too course-grained to distinguish between zero
+and non-zero integers, there's no way to tell if evaluating a division
+operation is safe.  Consequently \emph{any} program that includes a
+division operation will be reported as potentially causing an error.
+Even obviously error free programs like $\Div(10,2)$.
+
+
 
 \subsection{Type Judgments}\label{sec:type-judgments}
 
