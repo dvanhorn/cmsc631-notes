@@ -1188,7 +1188,7 @@ Here is the rule for $\Mult$, for example:
 \begin{mathpar}
 \inferrule{\typevaljudge\relax{\mexp_1}{\mtype_1,\mcset_1} \\
            \typevaljudge\relax{\mexp_2}{\mtype_2,\mcset_2}}
-          {\typevaljudge\relax{\Mult(\mexp_1,\mexp_2)}{\Int,\mcset_1 \cup \mcset_2 \cup \{ \mtype = \Int \}}}
+          {\typevaljudge\relax{\Mult(\mexp_1,\mexp_2)}{\Int,\mcset_1 \cup \mcset_2 \cup \{ \mtype_1 = \Int, \mtype_2 = \Int \}}}
 \end{mathpar}
 
 The remaining interesting rules are for variables and conditionals:
