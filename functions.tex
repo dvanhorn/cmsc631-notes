@@ -1,0 +1,116 @@
+\newpage
+\section{Functions}
+
+At this point, we've investigated the syntax, semantics, and analysis
+of very simple programming languages.  This has made our job easier,
+but made that of a programmer's basically impossible because these
+languages are so computationally limited.
+
+One of the simplest and most powerful computational mechanisms is that
+of a function.  Functions enable code-reuse as they can be applied
+many times to different arguments; they are an essential abstraction
+mechanism.  Functions also enable computations to be packaged as
+values, delaying their evaluation until the function is applied.
+While functions are a powerful programming mechanism, they
+significantly complicate reasoning about programs (as should be
+expected).  For starters, programs with functions may run indefinitely
+long and may not ever produce values.  Analysis methods must be
+careful to stay within the delicate realm of computability.
+
+\subsection{Syntax of functions}
+
+Let's develop a language $\Farith$ that is like $\Barith$ but with the
+addition of functions.  The syntax, modelled in OCaml, includes
+everything from $\Barith$:
+\begin{verbatim}
+type fexp = 
+    Int of int
+  | Bool of bool
+  | Var of string
+  | Pred of fexp
+  | Succ of fexp
+  | Plus of fexp * fexp
+  | Mult of fexp * fexp
+  | Div of fexp * fexp
+  | If of fexp * fexp * fexp
+\end{verbatim}
+and additionally it contains unary functions and applications:
+\begin{verbatim}
+  | App of fexp * fexp
+  | Fun of string * fexp
+\end{verbatim}
+A function consists of a bound variable, represented with a string,
+and a body expression.  Functions are applied with {\tt App}.  For
+example {\tt App(Fun("x", Var "x"), Int 0)} represents a $\Farith$
+expression corresponding to the program {\tt ((fun x -> x) 0)} written
+in OCaml.
+
+\subsection{Semantics of functions}
+
+The meaning of a $\Barith$ program is an \emph{answer}, which is
+either a value or an error.  A value is either a integer or a boolean:
+\begin{verbatim}
+type ans =
+    Val of value
+  | Err of string
+and value = 
+    VInt of int
+  | VBool of bool
+\end{verbatim}
+Evaluation {\tt eval : fexp -> env -> ans} is defined in terms of an
+environment, which is represented as a list of variable, value pairs:
+\begin{verbatim}
+type env = (string * value) list
+\end{verbatim}
+
+
+$\Farith$ programs are similar, but now there's a new kind of value:
+functions.  How should we represent functions?
+
+How did we represent booleans and integers?  With booleans and
+integers.  So how should we represent functions?  With functions?
+Let's explore that idea.  We can add another case to the {\tt value}
+type:
+\begin{verbatim}
+  | VFun of (value -> ans)
+\end{verbatim}
+If this is going to representation of function values, how should we
+handle evaluating {\tt Fun(x,e)}?  It should a function that receives
+a value {\tt v} as input and then evaluates {\tt e}.  Since {\tt e}
+may contain references to {\tt x}, we need to evaluate {\tt e} in an
+environment that maps {\tt x} to {\tt v}:
+\begin{verbatim}
+    | Fun (x, e) -> 
+        Val (VFun (fun v -> eval e ((x,v)::r)))
+\end{verbatim}
+where {\tt r} is the environment that {\tt Fun(x,e)} was evaluated in.
+
+For applications, we first evaluate each subexpression as usual,
+propagating errors
+\begin{verbatim}
+    | App (e1, e2) ->
+        (match eval e1 r with
+             Err s -> Err s
+           | Val v1 ->
+               (match eval e2 r with
+                    Err s -> Err s
+                  | Val v2 -> ...))
+\end{verbatim}
+At this point, we have two values, {\tt v1} and {\tt v2} in hand.  To
+evaluate the application requires apply {\tt v1} (if it's a function)
+to {\tt v2}:
+\begin{verbatim}
+   match (v1, v2) with 
+       VFun f, v -> f v
+     | _, _ -> Err "type error: not a function"
+\end{verbatim}
+
+Here's a little example calculation to test things out:
+\begin{verbatim}
+let two = Fun ("s", Fun ("z", App (Var "s", App (Var "s", Var "z"))))
+let succ = Fun ("x", (Succ (Var "x")))
+let v1 = eval 
+  (App ((App ((App (two, (App (two, App (two, two))))), succ)), 
+        Int 0))
+  []
+\end{verbatim}
