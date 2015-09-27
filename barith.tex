@@ -47,7 +47,7 @@ The $\Arith$ language is about as simple a programming language as
 you're likely to find, although it served us well in demonstrating many
 of the core ideas behind syntax and semantics.
 %
-As programmers, we like programming in rich, expressive languages, 
+As programmers, we like programming in rich, expressive languages,
 which $\Arith$ ain't.
 %
 But as we enrich languages, we must also enrich our models.
@@ -72,7 +72,7 @@ $\False$.  Finally, for good measure, let's throw in variables so that
 programs run on given inputs.  We'll call this language $\Barith$ to
 distinguish it from $\Arith$.
 
-The syntax of $\Barith$ is straightfoward to define.  We add a couple
+The syntax of $\Barith$ is straightforward to define.  We add a couple
 nullary constructors for Booleans, a binary constructor for equality
 and for division, and a ternary constructor for conditionals.  For
 variables, we assume there is an infinite, enumerable set of variable
@@ -214,7 +214,7 @@ type barith =
   | Div of barith * barith
 
 type value =
-  | VInt of int 
+  | VInt of int
   | VBool of bool
   | VError of string
 
@@ -235,7 +235,7 @@ let rec compile (e : barith) : (env -> value) =
              VInt (i-1))
     | Succ e ->
         let c = compile e in
-          (fun env -> 
+          (fun env ->
              let VInt i = c env in
                VInt (i+1))
     | Mult (e1, e2) ->
@@ -301,7 +301,7 @@ given in terms of an environment.
 
 The $\bstepname$ relation is the closure of $\breducename$ for
 compatibility with the syntax of expressions; The $\bmultistepname$
-relation is the relfexive, transitive closure of the $\bstepname$
+relation is the reflexive, transitive closure of the $\bstepname$
 relation.  The $=_\breducename$ equivalence relation is the symmetric
 closure of the $\bmultistepname$ relation.  The syntactic theory is
 consistent and standard reduction relation $\bstdstepname$ can be
@@ -330,7 +330,7 @@ is not a value and cannot step further, we say it is \deftech{stuck}.
 
 
 
-%%%%% 
+%%%%%
 \subsection{Meaningful Errors}
 
 The development of the previous section, which essentially ignores
@@ -343,10 +343,10 @@ explicitly.  For example, we may want to know what kinds of errors are
 possible, and if errors are possible, which code component is at fault
 for the error.  In the remainder of this section, we look at various
 ways of modelling errors for our simple language.  Although this is a
-simpified setting, we will see that errors, which are a primitive form
+simplified setting, we will see that errors, which are a primitive form
 of \deftech{effect}, complicate reasoning about programs.  In
 particular, we must be careful in designing the syntactic theory in
-order to remaing consistent.
+order to remain consistent.
 
 
 For a proper account of error behavior, we need to designate a set of
@@ -429,9 +429,9 @@ We need similar rules for all of the remaining syntactic constructors.
 Now that the semantics is in place, let's step back and consider some
 of its properties.  The addition of errors has significantly
 complicated the formal development---we had to add a bunch of rules
-for signal and propogating errors.  But dealing with errors and
+for signal and propagating errors.  But dealing with errors and
 establishing the meaning of errors is a crucial aspect of semantic
-engineering.  Remember that a semantics is useful for definining
+engineering.  Remember that a semantics is useful for defining
 properties of programs, and one of the more useful properties is
 ``this program causes no errors.''  So to even talk about this, we
 need to confront error behaviors in the semantics.
@@ -602,7 +602,7 @@ $\compat\bep$, and $=_\bep$ as the symmetric closure of
 $\multicompat\bep$.
 
 Note that this theory allows us to reduce inside of $\If$ expressions,
-but if an error occurs, we cannot propogate it out until the test
+but if an error occurs, we cannot propagate it out until the test
 expression produces a value and the $\If$ is reduced to the consequent
 or alternative based on it.
 
@@ -683,4 +683,3 @@ The example now immediately jumps to the final error state:
 Prove $\envreduce\mexp{\multistd{\be}}\mans \iff
 \envreduce\mexp{\multistd{\bep}}\mans$.
 \end{exercise}
-

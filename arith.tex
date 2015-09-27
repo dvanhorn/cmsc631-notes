@@ -46,7 +46,7 @@ $\Arith$ program; so $5$ is an $\Arith$ program by
 an $\Arith$ program by (2).  And therefore
 $\Mult(\Pred(5),5)$ is an $\Arith$ program by
 (5).  The recipe lets us build up bigger and bigger expressions from
-other expressions.  
+other expressions.
 
 Interpreted as a checking procedure, we can answer the question ``is
 $\Plus(4,\Succ(2))$ an $\Arith$ program?''  It
@@ -61,10 +61,10 @@ $\Arith$ is to use a BNF grammar:
 
 \[
 \begin{array}{lrcll}
-\mathbb{Z} 
+\mathbb{Z}
                & \mint & ::= & \dots\ |\ -1\ |\ 0\ |\ 1\ |\ \dots\\
- \Arith 
-               & e & ::= & i \\ % & \text{where }i\in\mathbb{Z}\\ 
+ \Arith
+               & e & ::= & i \\ % & \text{where }i\in\mathbb{Z}\\
                &   & |   & \Pred(e)\\
                &   & |   & \Succ(e)\\
                &   & |   & \Plus(e,e)\\
@@ -73,11 +73,11 @@ $\Arith$ is to use a BNF grammar:
 \]
 
 In both of these definitions, the occurrences of ``$\mint$'' and
-``$\mexp$'' are occurrences of \deftech{meta-variables}---the are
+``$\mexp$'' are occurrences of \deftech{meta-variables}---they are
 variables in the language describing the programming language (in this
 case $\Arith$).  The describing language itself (in this case math,
 but often it is another programming language) is called the
-\deftech{meta-language}, while the described languaged ($\Arith$) is
+\deftech{meta-language}, while the described language ($\Arith$) is
 called the \deftech{object-language}.  By convention, the name of a
 meta-variable signals the set of values it ranges over.  So for
 example a meta-variable $\mint$ may refer to $5$ or $17$, but never
@@ -158,11 +158,11 @@ earlier mathematical definition\footnote{Already a lie has crept in:
 language:
 %
 \begin{verbatim}
-   type arith = Int of int 
+   type arith = Int of int
               | Pred of arith
               | Succ of arith
               | Plus of arith * arith
-              | Mult of arith * arith 
+              | Mult of arith * arith
 \end{verbatim}
 The only difference, which is inconsequential, is that OCaml, unlike
 math, requires unions to be formed by disjoint types, so integers must
@@ -214,7 +214,7 @@ well.
 \end{mathpar}
 
 
-\paragraph{Note on notation:} 
+\paragraph{Note on notation:}
 %
 To be truly pedantic, we should add hypotheses to each of the inference
 rules that state $e \in \Arith$ and $i \in \mathbb{Z}$ and so
@@ -249,7 +249,7 @@ proof that $\Plus(4,\Succ(2)) \Downarrow 7$.
 
 When reading these inference rules, it's important to notice that the
 right hand side of the evaluation relation is a mathematical
-expression that denotes an integer; not a peice of syntax.  As the
+expression that denotes an integer; not a piece of syntax.  As the
 previous example shows, $\Plus(4,\Succ(2))$ evaluates to $7$; not a
 representation of the expression ``4+(2+1)''.  If it helps to see
 this, a completely equivalent formulation of, for example, the $\Plus$
@@ -268,11 +268,11 @@ $\Downarrow$ function as a function in a programming language such as
 OCaml.  It naturally is a recursive function over the data type of
 syntax:
 \begin{verbatim}
-   let rec eval (e : arith) : int = 
+   let rec eval (e : arith) : int =
        match e with
          Int i -> i
        | Pred e -> (eval e) - 1
-       | Succ e -> (eval e) + 1        
+       | Succ e -> (eval e) + 1
        | Plus (e1, e2) -> (eval e1) + (eval e2)
        | Mult (e1, e2) -> (eval e1) * (eval e2)
 \end{verbatim}
@@ -295,7 +295,7 @@ is adequate.
 
 This brings up several questions.  What is a semantics for?  Why would
 one semantics be preferred over another?  What other kind of semantics
-could there possible be?
+could there possibly be?
 
 \subsection{Reduction Semantics}
 
@@ -306,7 +306,7 @@ semantics.''  The program properties of interest depend on what you
 are trying to accomplish.  Are you trying to write a correct
 interpreter?  The natural semantics is probably what you need since it
 tells you what value the interpreter should produce.  Are you trying
-to prove upper bounds on the cost of runnning some programs?  The
+to prove upper bounds on the cost of running some programs?  The
 natural semantics won't work because it doesn't say \emph{anything}
 about cost.  Ditto if you want to prove a program can run forever
 without using all available memory.  So a semantics should be tailored
@@ -314,7 +314,7 @@ to properties of interest.
 
 With that in mind, let's investigate a semantics that informs us of each
 of the steps a computation goes through toward reaching a value.  This
-is useful for determing, for example, if two programs reach the same
+is useful for determining, for example, if two programs reach the same
 intermediate state, or in which order are operations performed during a
 computation.  In other words, such a semantics would tell us more
 about \emph{how} a program evaluates.
@@ -350,7 +350,7 @@ $\Plus(4,\Succ(2))$ doesn't step to anything.  The
 reason is that our axioms only apply when the arguments to operators
 are integers, which is not the case here.  It is true that
 $\Succ(2)$ steps to $3$, but none of the rules allows us to
-evaluate inside of a nested expression.  
+evaluate inside of a nested expression.
 
 
 
@@ -399,7 +399,7 @@ Using $\step$, we can see that $\Plus(4,\Succ(2))
 \step \Plus(4,3)$ and $\Plus(4,3) \step 7$.
 %
 Evaluation of a program can be viewed a series of related expressions
-arriving at a final answer.  
+arriving at a final answer.
 
 If we'd like to capture the notion of ``$e$ steps to $e'$ in any
 number of steps,'' we can define yet another relation, $\multistep\;
@@ -516,12 +516,12 @@ a list.  Therefore the signature of {\tt step\_a} will be {\tt arith ->
 \begin{verbatim}
    let rec step_a (e : arith) : arith list =
      match a e with
-       | None -> 
+       | None ->
            (match e with
               | Int i -> []
               | Pred e -> List.map (fun e' -> Pred e') (step_a e)
               | Succ e -> List.map (fun e' -> Succ e') (step_a e)
-              | Plus (e1, e2) -> 
+              | Plus (e1, e2) ->
                   let f e1s e2s = List.map
                     (fun (e1',e2') -> Plus (e1', e2'))
                     (cartesian e1s e2s)
@@ -538,7 +538,7 @@ a list.  Therefore the signature of {\tt step\_a} will be {\tt arith ->
 where
 \begin{verbatim}
    let cartesian (l : 'a list) (l' : 'b list) : ('a * 'b) list =
-     List.concat (List.map (fun e -> List.map (fun e' -> (e,e')) l') l) 
+     List.concat (List.map (fun e -> List.map (fun e' -> (e,e')) l') l)
 \end{verbatim}
 Some examples:
 \begin{verbatim}
@@ -587,7 +587,7 @@ reduce (one step) in parallel.
 
   You have a design choices to make for $\laxparstep$: it can allow
   any amount of parallelism, or it can impose a maximal amount of parallelism.
-  % 
+  %
   Let's call the more lax any amount of parallelism relation
   $\laxparstep$ and the maximal one $\maxparstep$.  The key difference
   is that $\laxparstep$ should relate
@@ -605,7 +605,7 @@ step, this program can either become $\Plus(4,\Pred(5))$ or
 $\Plus(\Succ(3),4)$.  So modelling $\step$ as a function in, say,
 OCaml can't be accomplished quite so easily as with $\Downarrow$.  One
 idea for modelling a finite relation in a functional language is to
-rely on the isomorphism 
+rely on the isomorphism
 \[
 (X \times X) \cong (X \longrightarrow \mathcal{P}(X))\text.
 \]
@@ -630,7 +630,7 @@ single set consisting of the element the partial function maps to.
 This has the nice property that it is consistent with the functional
 view of relations from the previous exercise, since
 \[
-(X \longrightarrow (\emptyset + \{X\})) \subseteq 
+(X \longrightarrow (\emptyset + \{X\})) \subseteq
 (X \longrightarrow \mathcal{P}(X))\text.
 \]
 Write an OCaml function \syntax{reduce} that represents $\reduce$
@@ -746,8 +746,8 @@ plugged in the hole.''
 This context-based formulation may seem like just a somewhat more
 compact notation for specifying the tedious compatibility inference
 rules that allow reduction to happen inside of subexpressions, but it
-also does something more signficant: it gives a name to the context in
-which a reduction occurs; naming something gives us control
+also does something more significant: it gives a name to the context in
+which a reduction occurs; naming something gives us control over
 it.\footnote{Computer science is in many ways the science of names.}
 We will examine some of the possibilities later in the notes.
 
@@ -766,7 +766,7 @@ Having a ``calculus of programs,'' as embodied by the equational
 theory for our language, is important to reason about programs and
 equivalences between them, but when trying to find what a program
 reduces it, it's better if we had a strategy for the mechanical
-calculuation of answers.  For the $\Arith$ language, it's easy to see
+calculation of answers.  For the $\Arith$ language, it's easy to see
 that any strategy will do: as long as you keep reducing something,
 you'll always find the correct answer eventually; it doesn't matter
 what order you go in.  For richer languages, it's not always clear
@@ -776,7 +776,7 @@ exists!).
 
 Establishing a strategy for the order in which a machine applies
 reduction axioms to obtain an answer is called a \deftech{standard
-  reduction semantics}; it represent a canonical way in which programs
+  reduction semantics}; it represents a canonical way in which programs
 are reduced.
 
 
@@ -835,7 +835,7 @@ and $\mexp_2$ are values, in which case the $\areducename$ rule
 applies.
 
 The rules for reducing inside expressions are not quite compatibility
-rules because they do not allow a reduction axiom to be apply to
+rules because they do not allow a reduction axiom to be applied to
 \emph{any} subexpression.  Instead, they encode a \deftech{reduction
   strategy} that specifies the one subexpression where an axiom may be
 applied.
@@ -851,10 +851,10 @@ $\areducename$:
               | Int i -> []
               | Pred e -> List.map (fun e' -> Pred e') (step_a e)
               | Succ e -> List.map (fun e' -> Succ e') (step_a e)
-              | Plus (e1, e2) -> 
+              | Plus (e1, e2) ->
                   let f e1s e2s = List.map
                     (fun (e1',e2') -> Plus (e1', e2'))
-                    (cartesian e1s e2s)            
+                    (cartesian e1s e2s)
                   in
                     (match e1 with
                       | Int i -> (f [e1] (standard_step_a e2))
@@ -940,7 +940,7 @@ The standard semantics has the following desirable properties:
 \begin{enumerate}
 %% \item it is a function,
 %% \[
-%% \bvstdstep\menv\mexp{\mexp'} \wedge 
+%% \bvstdstep\menv\mexp{\mexp'} \wedge
 %% \bvstdstep\menv\mexp{\mexp''} \Rightarrow \mexp'=\mexp''\text,
 %% \]
 \item if the standard semantics produces a value, it is consistent with the reduction semantics,
@@ -1008,17 +1008,17 @@ let rec decompose (e : arith) : (ecxt * arith) option =
   | Succ (Int i) -> Some (Hole, e)
   | Plus (Int i, Int j) -> Some (Hole, e)
   | Mult (Int i, Int j) -> Some (Hole, e)
-  | Pred e -> 
+  | Pred e ->
     let Some (c', e') = decompose e in Some (EPred c', e')
-  | Succ e -> 
+  | Succ e ->
     let Some (c', e') = decompose e in Some (ESucc c', e')
-  | Plus (Int i, e) -> 
+  | Plus (Int i, e) ->
     let Some (c', e') = decompose e in Some (EPlusR (i, c'), e')
   | Plus (e, e2) ->
     let Some (c', e') = decompose e in Some (EPlusL (c', e2), e')
-  | Mult (Int i, e) -> 
+  | Mult (Int i, e) ->
     let Some (c', e') = decompose e in Some (EMultR (i, c'), e')
-  | Mult (e, e2) -> 
+  | Mult (e, e2) ->
     let Some (c', e') = decompose e in Some (EMultL (c', e2), e')
 \end{verbatim}
 This code relies on the following (easy to prove) fact that if an
@@ -1032,7 +1032,7 @@ process until a value is reached:
 let rec eval (e : arith) : int =
   match e with
     Int i -> i
-  | _ -> 
+  | _ ->
     let Some (c, e') = decompose e in
     let Some r = a e' in
     eval (plug c r)
@@ -1056,7 +1056,7 @@ What is a compiler?
 
 One view is the following: a compiler is a function that consumes a
 program and produces a program, which when run produces the same
-result as the given progam.
+result as the given program.
 
 In other words,
 \begin{verbatim}
@@ -1106,10 +1106,10 @@ of syntactic case analysis for the expression being run:
    let rec compile_2 (e : arith) : (unit -> int) =
      match e with
        | Int i -> (fun () -> i)
-       | Pred e -> 
+       | Pred e ->
           let c = compile_2 e in
             (fun () -> c () - 1)
-       | Succ e -> 
+       | Succ e ->
           let c = compile_2 e in
             (fun () -> c () + 1)
        | Plus (e1, e2) ->
@@ -1131,7 +1131,7 @@ arithmetic operations and function calls to run code.
 \subsection{Again, with Ambiguity}
 
 Let's now replay the development of the various formulations of
-$\Arith$ with the slighest addition to the language.  Let's add the
+$\Arith$ with the slightest addition to the language.  Let's add the
 following form of expression: $\Amb(\mexp_1,\mexp_2)$, which we'll
 take to mean ``evaluate, ambiguously, to either the value of $\mexp_1$
 or $\mexp_2$''.
@@ -1154,18 +1154,18 @@ integers.  Because of this, we will run into trouble with our {\tt
 of the mathematical definition of $\Downarrow$ into OCaml in the
 presence of $\Amb$:
 \begin{verbatim}
-   type arith = 
-     | Int of int 
+   type arith =
+     | Int of int
      | Pred of arith
      | Succ of arith
      | Plus of arith * arith
-     | Mult of arith * arith 
+     | Mult of arith * arith
 
-   let rec eval (e : arith) : int = 
+   let rec eval (e : arith) : int =
        match e with
        | Int i -> i
        | Pred e -> (eval e) - 1
-       | Succ e -> (eval e) + 1        
+       | Succ e -> (eval e) + 1
        | Plus (e1, e2) -> (eval e1) + (eval e2)
        | Mult (e1, e2) -> (eval e1) * (eval e2)
        | Amb (e1, e2) -> eval e1
@@ -1188,7 +1188,7 @@ integers.  While OCaml has a nice, general purpose set library, an
 easy hack is to represent a set as a list.  Therefore the signature of
 {\tt eval} will be {\tt arith -> int list}.
 
-Let's take the function in peices:
+Let's take the function in pieces:
 \begin{verbatim}
 let rec eval (e : arith) : int list =
   match e with
@@ -1228,9 +1228,9 @@ the Cartesian product of two given lists.
 %
 Now the cases for addition and multiplication are easy:
 \begin{verbatim}
-  | Plus (e1, e2) -> 
+  | Plus (e1, e2) ->
       List.map (fun (v1,v2) -> v1+v2) (cartesian (eval e1) (eval e2))
-  | Mult (e1, e2) -> 
+  | Mult (e1, e2) ->
       List.map (fun (v1,v2) -> v1*v2) (cartesian (eval e1) (eval e2))
 \end{verbatim}
 Finally we have the case of $\Amb$.  Suppose we have $\Amb(\mexp_1,\mexp_2)$ where,
@@ -1249,11 +1249,11 @@ Putting it all together, we have:
 let rec eval (e : arith) : int list =
   match e with
   | Int i -> [i]
-  | Pred e -> 
+  | Pred e ->
       List.map (fun v -> v-1) (eval e)
   | Succ e ->
       List.map (fun v -> v+1) (eval e)
-  | Plus (e1, e2) -> 
+  | Plus (e1, e2) ->
       List.map (fun (v1,v2) -> v1+v2) (cartesian (eval e1) (eval e2))
   | Mult (e1, e2) ->
       List.map (fun (v1,v2) -> v1*v2) (cartesian (eval e1) (eval e2))

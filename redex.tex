@@ -14,7 +14,7 @@ the semantic engineering life-cycle.
 
 \subsection{Racket: a General-Purpose Host Language}
 
-Redex is a domain-specific language (DSL) embeded within the
+Redex is a domain-specific language (DSL) embedded within the
 general-purpose language Racket.  Racket is a descendant of Lisp and
 adopts much of Lisp's fully parenthesized prefix notation.  It comes
 with an interactive development environment, called DrRacket, and has
@@ -22,7 +22,7 @@ a large corpus of libraries.  It has been developed over the last
 twenty or so years by the PLT research group, which is distributed
 across several different universities in the USA.  The group has
 developed Racket in part to support their educational work and in part
-as a vehicle for researching programming languages.  
+as a vehicle for researching programming languages.
 
 The basic unit of code in Racket is a module, which must first declare
 which language it is written in with the {\tt \#lang} directive:
@@ -65,7 +65,7 @@ figure~\ref{fig:drracket}.
 
 
 The interactions area has a prompt for accepting expressions to
-evaluate.  Any definitions from the module are avaiable within the
+evaluate.  Any definitions from the module are available within the
 interactions window, so we can experiment and calculate other results
 of factorial:
 \begin{verbatim}
@@ -103,7 +103,7 @@ Defining the syntax of a language is accomplished with {\tt
   define-language}, which gives the grammar of terms for the language:
 \begin{verbatim}
 (define-language A
-  (e ::= 
+  (e ::=
      v
      (Pred e)
      (Succ e)
@@ -200,13 +200,13 @@ achieved with:
 \end{verbatim}
 A {\tt reduction-relation} specifies which language it operates on, in
 this case {\tt A}.  The language determines the interpretation of the
-meta-variables (and what whether a peice of syntax is a
+meta-variables (and what whether a piece of syntax is a
 meta-variable).  The relation is written as a set of axioms, each of
 which has the form {\tt (--> $L\;R\;\mathit{name}$)} where $L$ is a
 \deftech{pattern} and $R$ is a \deftech{template} and $\mathit{name}$
 is an optional name for the rule.  Applying a reduction relation to a
 term matches the term against each pattern and if the match is
-succesful produces the template with each meta-variable replaced by
+successful produces the template with each meta-variable replaced by
 the corresponding substructure of the pattern match.
 
 A reduction relation can be applied with {\tt apply-reduction-relation}:
@@ -264,8 +264,8 @@ metafunction in Redex:
 (define-metafunction A
   [(eval v) v]
   [(eval (Pred e)) ,(sub1 (term (eval e)))]
-  [(eval (Succ e)) ,(add1 (term (eval e)))]  
-  [(eval (Plus e_1 e_2)) 
+  [(eval (Succ e)) ,(add1 (term (eval e)))]
+  [(eval (Plus e_1 e_2))
    ,(+ (term (eval e_1))
        (term (eval e_2)))]
   [(eval (Mult e_1 e_2))
@@ -292,9 +292,9 @@ a {\tt term}:
 It's important to notice that this defines a \emph{function}, not a
 \emph{relation}.  Since we know that $\Downarrow$ for $\Arith$ is a
 function, this is a correct model of $\Downarrow$, but it would not be
-if $\Downarrow$ were realy a relation, such as with the natural
+if $\Downarrow$ were really a relation, such as with the natural
 semantics of imprecise errors for $\Barith$.  To model relations (that
-are not reduction relations), we need another mecahnism: {\tt
+are not reduction relations), we need another mechanism: {\tt
   define-judgment-form}.
 
 \subsection{Contexts}
@@ -332,8 +332,8 @@ Since each of these rules has a repeated structure of using {\tt
 (define -->a
   (reduction-relation
    A
-   (~~> (Pred i) ,(sub1 (term i)))                                                              
-   (~~> (Succ i) ,(add1 (term i)))                                                                   
+   (~~> (Pred i) ,(sub1 (term i)))
+   (~~> (Succ i) ,(add1 (term i)))
    (~~> (Mult i j) ,(* (term i) (term j)))
    (~~> (Plus i j) ,(+ (term i) (term j)))
    with
@@ -360,7 +360,7 @@ Defining a relation is accomplished with the {\tt
    (evalr (Pred e) ,(sub1 (term v)))]
   [(evalr e v)
    -----------
-   (evalr (Succ e) ,(add1 (term v)))]  
+   (evalr (Succ e) ,(add1 (term v)))]
   [(evalr e_1 v_1)
    (evalr e_2 v_2)
    ---------------
@@ -374,7 +374,7 @@ Defining a relation is accomplished with the {\tt
 A judgment is a relation that is being modelled computationally as a
 function.  The {\tt \#:mode} keyword gives a mode specification which
 declares which parts of the relation can be consider inputs ({\tt I})
-and which parts can be considered outouts ({\tt O}), which can be
+and which parts can be considered outputs ({\tt O}), which can be
 thought of as specifying which positions are inputs and outputs in
 this function.
 
@@ -421,8 +421,8 @@ example, here is a model of the natural numbers and a formulation of
    ---------------
    (>= (S N_0) N_1)])
 
-(define ->>= 
-  (reduction-relation 
+(define ->>=
+  (reduction-relation
    Natural
    (--> N_0 N_1
         (judgment-holds (>= N_0 N_1)))))
@@ -455,7 +455,7 @@ iterating the standard reduction relation are exactly equal to the set
 of values related by the natural semantics relation.  Redex will
 generate random expressions and search for a counterexample with {\tt
   redex-check}:
-\begin{verbatim}                                                                          
+\begin{verbatim}
 > (redex-check A e
                (equal? (apply-reduction-relation* -->a (term e))
                        (judgment-holds (evalr e v) v)))
@@ -497,7 +497,7 @@ We can now extend the syntax of {\tt A} to obtain {\tt B}:
      (If e e e))
   (x ::= variable)
   (v ::= .... b)
-  (b ::= True False) 
+  (b ::= True False)
   (ρ ::= ((x v) ...))
   (E ::= ....
      (Div E e)
@@ -517,16 +517,16 @@ The reduction relation {\tt a} can be lifted to work on {\tt B}
 expressions and unioned with the new reduction axioms:
 \begin{verbatim}
 (define (b ρ)
-  (union-reduction-relations 
+  (union-reduction-relations
    (extend-reduction-relation a B)
    (reduction-relation
     B
     (--> x v (where v (lookup ,ρ x)))
     (--> (Div i j) ,(quotient (term i) (term j))
-         (side-condition (not (zero? (term j)))))    
+         (side-condition (not (zero? (term j)))))
     (--> (Eq i i) True)
     (--> (Eq i j) False
-         (side-condition (not (= (term i) (term j)))))    
+         (side-condition (not (= (term i) (term j)))))
     (--> (If True e_1 e_2) e_1)
     (--> (If False e_1 e_2) e_2))))
 \end{verbatim}
@@ -537,7 +537,7 @@ variable if it exists, or produced {\tt \#f}:
 (define-metafunction B
   lookup : ρ x -> v or #f
   [(lookup ((x v) (x_0 v_0) ...) x) v]
-  [(lookup ((x_0 v_0) (x_1 v_1) ...) x) 
+  [(lookup ((x_0 v_0) (x_1 v_1) ...) x)
    (lookup ((x_1 v_1) ...) x)]
   [(lookup () x) #f])
 \end{verbatim}
@@ -585,7 +585,7 @@ depths.
 
 Now let's look at the second clause:
 \begin{verbatim}
-  [(lookup ((x_0 v_0) (x_1 v_1) ...) x) 
+  [(lookup ((x_0 v_0) (x_1 v_1) ...) x)
    (lookup ((x_1 v_1) ...) x)]
 \end{verbatim}
 This pattern matches whenever the environment contains one or more
@@ -599,7 +599,7 @@ structurally smaller environment.
 Programming with Redex's souped-up pattern matcher takes some getting
 used to.  Try things out.  Make conjectures with test cases.
 
-\begin{exercise} 
+\begin{exercise}
 Design a metafunction {\tt pukool} which is like {\tt lookup} but
 searches through the environment from right to left.  The following
 test cases demonstrate the difference:
@@ -619,9 +619,9 @@ extension:
   (e ::= .... r)
   (r ::= (Err variable))
   (a ::= v r))
- 
+
 (define err
-  (reduction-relation 
+  (reduction-relation
    BE
    (--> (Div i 0) (Err Div0))
    (--> (Div b v) (Err Div1))
@@ -640,13 +640,13 @@ extension:
    (--> (Mult r e) r)
    (--> (Mult v r) r)
    (--> (Div r e) r)
-   (--> (Div v r) r)    
+   (--> (Div v r) r)
    (--> (Eq r e) r)
    (--> (Eq v r) r)
    (--> (If r e_0 e_1) r)))
 
 (define (bep ρ)
-  (union-reduction-relations 
+  (union-reduction-relations
    (extend-reduction-relation (b ρ) BE)
    err prop))
 \end{verbatim}
