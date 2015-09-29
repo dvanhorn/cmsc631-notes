@@ -60,7 +60,7 @@ classify phrases by \emph{the set of answers} they compute.
 
 For some simple languages, calculating such a set is trivial.  For
 example, for any $\Arith$ program $\mexp$, it's easy to compute the
-set $\{\mint\ |\ \mexp \Downarrow \mint \}$.  
+set $\{\mint\ |\ \mexp \Downarrow \mint \}$.
 %
 Even for $\Barith$, if we consider characterizing phrases $\mexp$ with
 a \emph{given environment} $\menv$, then it's easy to compute $\{
@@ -97,7 +97,7 @@ compute but rather by whether they compute:
 For example, $\Mult(3, 4)$ should be characterized as computing an
 integer.  $\If(\True,3,\False)$ computes a boolean.
 $\If(\mvar,3,\False)$ computes a boolean, an integer, or an error,
-dependending on the environment.
+depending on the environment.
 
 
 We therefore define the following \emph{abstract answers}:
@@ -123,7 +123,7 @@ Now let's explore an abstract evaluation relation for $\Barith$ based
 around the above notion of abstract values.  The idea here is that the
 formulate an alternative relation that operates on abstract values
 instead of values.  There are many abstract evaluation relations.
-What makes them admissable is if they are \emph{sound}, i.e. if it
+What makes them admissible is if they are \emph{sound}, i.e. if it
 possible for an expression to compute a certain kind of answer, that
 answer is in the (denotation) of the abstract answer.  Formally:
 
@@ -168,7 +168,7 @@ consider some concrete and abstract cases in tandem:
           {\vdash \mvar \Downarrow \Int}
 \end{mathpar}
 On the left is the concrete evaluation relation for variables, which
-are given meaning in terms of a particular environent.  The abstract
+are given meaning in terms of a particular environment.  The abstract
 evaluator must handle all possible environments; since an environment
 may map a variable to an integer or a boolean, the rule states that a
 variable occurrence may evaluate to either $\Bool$ or $\Int$.
@@ -192,7 +192,7 @@ Here are the concrete and abstract rules for literals:
 
 \inferrule{\ }
           {\vdash \mint \Downarrow \Int}
-          
+
 \inferrule{\ }
           {\vdash \mbool \Downarrow \Bool}
 \end{mathpar}
@@ -301,7 +301,7 @@ kind of evaluation relation, which gives an approximation of the
 expression evaluates to, the ``:'' says what set of values the result
 belongs to.  That intuition can guide the definition of the relation.
 So for example, an integer expression evaluates to something in
-$\Int$, and a Boolean evaluates to someting in $\Bool$:
+$\Int$, and a Boolean evaluates to something in $\Bool$:
 \begin{mathpar}
 \inferrule{\ }
           {\typevaljudge\menv\mint\Int}
@@ -381,7 +381,7 @@ does not produce an error.  By reasoning about a single ``abstract''
 run of the program, we can conclude facts about all possible
 ``concrete'' runs: none of them produce errors.
 
-We can make this claim precise with a relation on environments.  
+We can make this claim precise with a relation on environments.
 First, let's define:
 \begin{align*}
 \typeof(\mint) = \Int\\
@@ -396,7 +396,7 @@ variables to values of the same type:
 \end{mathpar}
 
 \begin{claim}
-If $\typevaljudge\menv\mexp\mtype$ and $\menv \sim \menv'$, then 
+If $\typevaljudge\menv\mexp\mtype$ and $\menv \sim \menv'$, then
 $\typevaljudge{\menv'}\mexp\mtype$.
 \end{claim}
 \begin{proof}
@@ -451,11 +451,11 @@ following error free programs:
 \If(\mathit{x},\If(\mathit{x},7,\Eq(\True,1)),8)\mbox{, where $\mathit{x}:\Bool$}
 \end{align*}
 
-\paragraph{Note on Runtime Errors:} 
+\paragraph{Note on Runtime Errors:}
 Type systems often only rule out a certain class of errors.  Which
 class depends on the particular type system.  The system we've just
 developed rules out all errors except $\Err_{\Div0}$ errors, which
-were ommitted from the presentation for simplicity.  To be precise
+were omitted from the presentation for simplicity.  To be precise
 about divide-by-zero errors would require some tedious and
 uninteresting additions to the semantics and conditions on the claims.
 
@@ -564,7 +564,7 @@ the original semantics more closely and explicitly characterize the
 error behavior of programs.
 
 Suppose we add rules corresponding the axioms for creating and
-propogating errors (only showing a small excerpt):
+propagating errors (only showing a small excerpt):
 \begin{mathpar}
 \inferrule{\mtype \neq \Bool}
           {\envreduce[\Gamma]{\If(\mtype,\mexp_1,\mexp_2)}{\treduce'}{\Err_{\If0}}}
@@ -599,7 +599,7 @@ If $\neg(\envreduce[\Gamma]\mexp{\multicompat{\treduce'}}\mtans)$ and $\Gamma\si
 $\neg(\envreduce\mexp{\multicompat{\breducename}}\mans)$ where $\mans \sqsubseteq \mtans$.
 \end{claim}
 We can also state this claim in an equivalent way which says that if a
-program can evaluate to some answer, then an appoximation of that
+program can evaluate to some answer, then an approximation of that
 answer is in the abstract evaluation of the program:
 \begin{claim}[Soundness]\label{claim:soundness}
 If $\envreduce\mexp{\multicompat{\breducename}}\mans$ and
@@ -650,7 +650,7 @@ semantics.)
 
 \subsection{Abstract Interpretation with Intervals}\label{sec:ai-intv}
 
-In this section, let's develop another abstract interperation of
+In this section, let's develop another abstract interpretation of
 $\Barith$, this time with a more refined abstract domain.  On
 integers, we'll use intervals and interpret the integer operations
 using interval arithmetic and on Booleans we'll do no approximation.
@@ -817,7 +817,7 @@ of integers:
 The type $\Int(\mintv)$ is known as a \deftech{refinement type}, which
 is a type qualified by a predicate which holds for every value of that
 type.  For our purposes, the predicates only include intervals, but
-richer refinement type systems can be defined by embeding richer
+richer refinement type systems can be defined by embedding richer
 logics of predicates into the types.  Refinement types, while not
 quite mainstream yet, are featured in several mature research project
 such as the refinement type system for F\# called
@@ -826,11 +826,11 @@ and a variant of Haskell with refinements called Liquid
 Haskell\footnote{\url{http://goto.ucsd.edu/~rjhala/liquid/haskell/blog/about/}}.
 
 To derive the type system from the reduction semantics, we start with
-a straightfoward reformulation of most of the axioms:
+a straightforward reformulation of most of the axioms:
 
 \begin{mathpar}
 \inferrule{\ }
-          {\typevaljudge\Gamma\mint{\Int(\mint,\mint)}}         
+          {\typevaljudge\Gamma\mint{\Int(\mint,\mint)}}
 
 \inferrule{\Gamma(\mvar) = \mtype}
           {\typevaljudge\Gamma\mvar{\mtype}}
@@ -894,7 +894,7 @@ This claim relies on the following definition of $\sqsubseteq$:
 
 \inferrule{\forall \mvar \in \dom(\menv).\menv(\mvar) \sqsubseteq \Gamma(\mvar) }
           {\menv \sqsubseteq \Gamma}
-          
+
 \end{mathpar}
 
 \begin{exercise}
@@ -973,7 +973,7 @@ actually be reached.
 The reduction of an expression is formulated as a reduction relation
 on expression and path condition pairs:
 $\envreduce[\relax]{(\mexp,\mpath)}\sreduce{(\mexp',\mpath')}$.  The
-meaning of such a reduction is that $\mexp$, under the assumptions of 
+meaning of such a reduction is that $\mexp$, under the assumptions of
 $\mpath$, may reduce to to $\mexp'$, implying conditions $\mpath'$.
 
 We use a relation on path conditions $\allows\mcon$, which denotes
@@ -1018,7 +1018,7 @@ satisfiability problem (SAT), which is just an instance of the SMT
 problem, using Boolean arithmetic as the underlying theory.  Other
 theories might include the theories of real numbers, intervals, data
 structures, and so on.  There are many mature SMT solvers available
-(e.g.~Z3, CVC4), which can effecitvely decide $\allows\mcon$.  If we
+(e.g.~Z3, CVC4), which can effectively decide $\allows\mcon$.  If we
 had a richer language, the path conditions would involve richer
 theories, which may not be decidable.  At that point, a sound
 approximation would need to be used.
@@ -1134,7 +1134,7 @@ Finally the fact that {\tt fact} is the argument to a multiplication
 operation also suggests it needs to produce an integer.
 
 In this informal analysis what we've done is collect a set of
-contraints on the usage of variables.  If that set of constraints is
+constraints on the usage of variables.  If that set of constraints is
 consistent, i.e. a variable is not used as an integer in one place and
 as a Boolean in another, then we conclude the program is type correct.
 This informal process can be made rigorous to produce a type inference
@@ -1202,7 +1202,7 @@ The remaining interesting rules are for variables and conditionals:
 A variable generates no constraints, because a variable occurrence
 alone doesn't imply anything about how the value of the variable is
 used.  But the type of a variable is just the variable's name.  So if
-the variable occurrs in some context that constrains its type, a type
+the variable occurs in some context that constrains its type, a type
 constraint will be generated for the variable.  For example,
 $\Pred(\mvar)$ generates the constraint $\mvar = \Int$.  If a variable
 occurs in multiple contexts that use the variable with different types
@@ -1225,7 +1225,7 @@ if the constraints have a solution.
 \newcommand\msubst{\psi}
 
 
-The general problem of determing if a set of equations between terms
+The general problem of determining if a set of equations between terms
 has a solution is known as the \deftech{unification problem}.
 %
 The way we will represent a solution to an instance of the unification
@@ -1246,13 +1246,13 @@ function, $\solve(\mcset)$:
 \begin{align}
 \unify(\emptyset,\msubst) &= \msubst\\
 \unify(\{\mtype = \mtype\}\cup\mcset,\msubst) &= \unify(\mcset,\msubst)\\
-\unify(\{\mvar  = \mtype\}\cup\mcset,\msubst) &= 
+\unify(\{\mvar  = \mtype\}\cup\mcset,\msubst) &=
 \begin{cases}
 \unify(\mcset,\msubst[\mtype/\mvar] \circ [\mvar \mapsto \mtype]) & \mbox{if }\msubst(\mvar) = \bot\\
 \unify(\mcset \cup \{ \mtype=\mtype' \},\msubst) & \mbox{if }\msubst(\mvar) = \mtype'\\
 \end{cases}\\
-\unify(\{\mtype = \mvar\}\cup\mcset,\msubst) &= 
-\unify(\{\mvar  = \mtype\}\cup\mcset,\msubst) 
+\unify(\{\mtype = \mvar\}\cup\mcset,\msubst) &=
+\unify(\{\mvar  = \mtype\}\cup\mcset,\msubst)
 \end{align}
 \end{gather*}
 
@@ -1267,7 +1267,7 @@ variable is already in the substitution, a new constraint is added to
 equate the type and what's given by the substitution.
 
 The unification is sound and complete: it produces a substitution
-whenver one exists, and the substitution produced is always a
+whenever one exists, and the substitution produced is always a
 solution.  If a solution exists, the program is well-typed under some
 typing environment:
 \begin{claim}
@@ -1276,7 +1276,7 @@ If $\typevaljudge\relax\mexp{\mtype,\mcset}$ and $\solve(\mcset) =
 $\typevaljudge\Gamma\mexp{\mtype'}$.
 \end{claim}
 
-The typing environment is \emph{almost} the same as the substituion
+The typing environment is \emph{almost} the same as the substitution
 $\msubst$, but we have to be a little careful about underconstrained
 variables.  For example in this program:
 $\If(\True,\mathit{x},\mathit{y})$, the variables $\mathit{x}$ and
@@ -1329,4 +1329,3 @@ a type environment.
 %% P(\menv,\mexp) \iff \menv \vdash \mexp =_\breducename \merr \text{, where } \merr \in \mathit{TypeError}\\
 %% Q(\mexp) \iff \exists \menv. \menv\text{ closes } \mexp\text{ and } \vdash \mexp =_\breducename \merr \text{, where } \merr \in \mathit{TypeError}
 %% \end{align*}
-
